@@ -10,9 +10,7 @@
 ## SavedVariables: RecountDB
 ## SavedVariablesPerCharacter: RecountPerCharDB
 
-#@no-lib-strip@
 embeds.xml
-#@end-no-lib-strip@
 
 locales\Recount-enUS.lua
 locales\Recount-deDE.lua
