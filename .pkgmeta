@@ -1,23 +1,5 @@
 package-as: Recount
 
-externals:
-    libs/AceComm-3.0: https://repos.wowace.com/wow/ace3/trunk/AceComm-3.0
-    libs/AceConfig-3.0: https://repos.wowace.com/wow/ace3/trunk/AceConfig-3.0
-    libs/AceDBOptions-3.0: https://repos.wowace.com/wow/ace3/trunk/AceDBOptions-3.0
-    libs/LibGraph-2.0: https://repos.wowace.com/wow/libgraph-2-0/trunk/LibGraph-2.0
-    libs/AceTimer-3.0: https://repos.wowace.com/wow/ace3/trunk/AceTimer-3.0
-    libs/AceLocale-3.0: https://repos.wowace.com/wow/ace3/trunk/AceLocale-3.0
-    libs/CallbackHandler-1.0: https://repos.wowace.com/wow/ace3/trunk/CallbackHandler-1.0
-    libs/AceConsole-3.0: https://repos.wowace.com/wow/ace3/trunk/AceConsole-3.0
-    libs/LibStub: https://repos.wowace.com/wow/ace3/trunk/LibStub
-    libs/AceGUI-3.0: https://repos.wowace.com/wow/ace3/trunk/AceGUI-3.0
-    libs/AceSerializer-3.0: https://repos.wowace.com/wow/ace3/trunk/AceSerializer-3.0
-    libs/AceDB-3.0: https://repos.wowace.com/wow/ace3/trunk/AceDB-3.0
-    libs/LibSharedMedia-3.0: https://repos.wowace.com/wow/libsharedmedia-3-0/trunk/LibSharedMedia-3.0
-    libs/AceAddon-3.0: https://repos.wowace.com/wow/ace3/trunk/AceAddon-3.0
-    libs/LibBossIDs-1.0: https://repos.wowace.com/wow/libbossids-1-0/trunk
-    libs/LibDropDown-1.0: https://github.com/neotron/WoW-LibDropDown/trunk/LibDropdown-1.0
-
 enable-nolib-creation: no
 
 ignore:
