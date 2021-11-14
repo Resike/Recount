@@ -1,5 +1,5 @@
 local MAJOR = "LibDropdown-1.0"
-local MINOR = 2
+local MINOR = 4
 
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
 if not lib then return end
@@ -35,7 +35,7 @@ local GameTooltip_SetDefaultAnchor = GameTooltip_SetDefaultAnchor
 local HIGHLIGHT_FONT_COLOR = HIGHLIGHT_FONT_COLOR
 local NORMAL_FONT_COLOR = NORMAL_FONT_COLOR
 
-local WOW_RETAIL = WOW_PROJECT_ID == WOW_PROJECT_MAINLINE
+local WOW_BCC = WOW_PROJECT_ID == WOW_PROJECT_BURNING_CRUSADE_CLASSIC
 
 local framePool = lib.framePool or {}
 lib.framePool = framePool
@@ -104,12 +104,12 @@ local function InitializeFrame(frame)
 	frame:SetBackdrop(backdropInfo)
 
 	if backdropInfo then
-		if WOW_RETAIL then
-			frame:SetBackdropColor(GameTooltip.NineSlice:GetCenterColor())
-			frame:SetBackdropBorderColor(GameTooltip.NineSlice:GetBorderColor())
-		else
+		if WOW_BCC then
 			frame:SetBackdropColor(GameTooltip:GetBackdropColor())
 			frame:SetBackdropBorderColor(GameTooltip:GetBackdropBorderColor())
+		else
+			frame:SetBackdropColor(GameTooltip.NineSlice:GetCenterColor())
+			frame:SetBackdropBorderColor(GameTooltip.NineSlice:GetBorderColor())
 		end
 	end
 	frame:SetScale(GameTooltip:GetScale())
