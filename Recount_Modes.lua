@@ -402,7 +402,7 @@ function DataModes:DOTReturner(data, num)
 		return (data.Fights[Recount.db.profile.CurDataSet].DOT_Time or 0), (data.Fights[Recount.db.profile.CurDataSet].DOT_Time or 0) / ((data.Fights[Recount.db.profile.CurDataSet].ActiveTime or 0) + Epsilon)
 	end
 
-	return (data.Fights[Recount.db.profile.CurDataSet].DOT_Time or 0), {{data.Fights[Recount.db.profile.CurDataSet].DOTs, L["'s DOT Uptime"],DetailTitles.DOTs}}
+	return (data.Fights[Recount.db.profile.CurDataSet].DOT_Time or 0), {{data.Fights[Recount.db.profile.CurDataSet].DOTs, L["'s DOT Uptime"], DetailTitles.DOTs}}
 end
 
 function DataModes:HOTReturner(data, num)
@@ -413,7 +413,7 @@ function DataModes:HOTReturner(data, num)
 		return (data.Fights[Recount.db.profile.CurDataSet].HOT_Time or 0), (data.Fights[Recount.db.profile.CurDataSet].HOT_Time or 0) / ((data.Fights[Recount.db.profile.CurDataSet].ActiveTime or 0) + Epsilon)
 	end
 
-	return (data.Fights[Recount.db.profile.CurDataSet].HOT_Time or 0), {{data.Fights[Recount.db.profile.CurDataSet].HOTs, L["'s HOT Uptime"],DetailTitles.HOTs}}
+	return (data.Fights[Recount.db.profile.CurDataSet].HOT_Time or 0), {{data.Fights[Recount.db.profile.CurDataSet].HOTs, L["'s HOT Uptime"], DetailTitles.HOTs}}
 end
 
 function DataModes:ActiveTime(data, num)
