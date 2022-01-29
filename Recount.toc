@@ -1,5 +1,5 @@
-## Interface: 20503
-## Version: v2.5.3b
+## Interface: 90105
+## Version: v9.1.5d
 ## Title: Recount
 ## Notes: Records Damage and Healing for Graph Based Display.
 ## Notes-ruRU: Записывает урон и исцеления и отоброжает различные графики.
