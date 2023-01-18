@@ -13,7 +13,10 @@ Description: Allows for easy creation of graphs
 local major = "LibGraph-2.0"
 local minor = 90000 + tonumber(("$Revision: 58 $"):match("(%d+)"))
 
+local _, _, _, clientRevision = GetBuildInfo()
+
 local WOW_RETAIL = WOW_PROJECT_ID == WOW_PROJECT_MAINLINE
+local IsWrathClassicPTR = WOW_PROJECT_ID == WOW_PROJECT_WRATH_CLASSIC and clientRevision >= 30401
 
 
 --Search for just Addon\\ at the front since the interface part often gets trimmed
@@ -165,7 +168,7 @@ function lib:CreateGraphRealtime(name, parent, relative, relativeTo, offsetX, of
 		bar:GetStatusBarTexture():SetVertTile(false)
 
 		local t = bar:GetStatusBarTexture()
-		if WOW_RETAIL then
+		if WOW_RETAIL or IsWrathClassicPTR then
 			t:SetGradient("VERTICAL", CreateColor(0.2, 0.0, 0.0, 0.5), CreateColor(1.0, 0.0, 0.0, 1.0))
 		else
 			t:SetGradientAlpha("VERTICAL", 0.2, 0.0, 0.0, 0.5, 1.0, 0.0, 0.0, 1.0)
@@ -510,7 +513,7 @@ function GraphFunctions:SetBarColors(BotColor, TopColor)
 	end
 	for i = 1, self.BarNum do
 		local t = self.Bars[i]:GetStatusBarTexture()
-		if WOW_RETAIL then
+		if WOW_RETAIL or IsWrathClassicPTR then
 			t:SetGradient("VERTICAL", CreateColor(BotColor[1], BotColor[2], BotColor[3], BotColor[4]), CreateColor(TopColor[1], TopColor[2], TopColor[3], TopColor[4]))
 		else
 			t:SetGradientAlpha("VERTICAL", BotColor[1], BotColor[2], BotColor[3], BotColor[4], TopColor[1], TopColor[2], TopColor[3], TopColor[4])
@@ -539,7 +542,7 @@ function GraphFunctions:RealtimeSetColors(BotColor, TopColor)
 	self.BarColorBot = BotColor
 	self.BarColorTop = TopColor
 	for _, v in pairs(self.Bars) do
-		if WOW_RETAIL then
+		if WOW_RETAIL or IsWrathClassicPTR then
 			v:GetStatusBarTexture():SetGradient("VERTICAL", CreateColor(self.BarColorBot[1], self.BarColorBot[2], self.BarColorBot[3], self.BarColorBot[4]), CreateColor(self.BarColorTop[1], self.BarColorTop[2], self.BarColorTop[3], self.BarColorTop[4]))
 		else
 			v:GetStatusBarTexture():SetGradientAlpha("VERTICAL", self.BarColorBot[1], self.BarColorBot[2], self.BarColorBot[3], self.BarColorBot[4], self.BarColorTop[1], self.BarColorTop[2], self.BarColorTop[3], self.BarColorTop[4])
@@ -569,7 +572,7 @@ function GraphFunctions:RealtimeSetWidth(Width)
 			bar:GetStatusBarTexture():SetVertTile(false)
 
 			local t = bar:GetStatusBarTexture()
-			if WOW_RETAIL then
+			if WOW_RETAIL or IsWrathClassicPTR then
 				t:SetGradient("VERTICAL", CreateColor(self.BarColorBot[1], self.BarColorBot[2], self.BarColorBot[3], self.BarColorBot[4]), CreateColor(self.BarColorTop[1], self.BarColorTop[2], self.BarColorTop[3], self.BarColorTop[4]))
 			else
 				t:SetGradientAlpha("VERTICAL", self.BarColorBot[1], self.BarColorBot[2], self.BarColorBot[3], self.BarColorBot[4], self.BarColorTop[1], self.BarColorTop[2], self.BarColorTop[3], self.BarColorTop[4])

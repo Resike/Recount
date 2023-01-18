@@ -414,10 +414,6 @@ Recount.consoleOptions = {
 			desc = L["Open Ace3 Config GUI"],
 			type = 'execute',
 			func = function()
-				-- Resike: Throws an error in AceConfigDialog if clicked twice.
-				if not WOW_RETAIL then
-					InterfaceOptionsFrame:Hide()
-				end
 				AceConfigDialog:SetDefaultSize("Recount", 500, 550)
 				AceConfigDialog:Open("Recount")
 			end
