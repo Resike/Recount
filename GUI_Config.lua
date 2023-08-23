@@ -1108,7 +1108,6 @@ function me:CreateFontSelection(parent)
 	end
 
 	theFrame.ScrollBar = CreateFrame("SCROLLFRAME", "Recount_Config_Fonts_Scrollbar", theFrame, "FauxScrollFrameTemplate")
-
 	theFrame.ScrollBar:SetScript("OnVerticalScroll", function(self, offset)
 		FauxScrollFrame_OnVerticalScroll(self, offset, 12, me.RefreshFonts)
 		end)
