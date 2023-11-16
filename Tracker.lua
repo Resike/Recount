@@ -1262,7 +1262,7 @@ function Recount:AddCurrentEvent(who, eventType, incoming, number, event)
 
 	local name, realm
 	local unit = who.unit
-	if not UnitExists(unit) then
+	if unit == true or not UnitExists(unit) then
 		unit = nil
 	end -- Sometimes there's boolean true in who.unit. It's source should be found and eliminated. After that, this check can be removed.
 
