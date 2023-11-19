@@ -515,29 +515,28 @@ end
 local TooltipFuncs = { }
 function TooltipFuncs:Damage(name, data)
 	if data then
-		local SortedData, total
 		GameTooltip:ClearLines()
 		GameTooltip:AddLine(name)
 		Recount:AddSortedTooltipData(L["Top 3"].." "..L["Damage Abilities"], data and data.Fights[Recount.db.profile.CurDataSet] and data.Fights[Recount.db.profile.CurDataSet].Attacks, 3)
 		GameTooltip:AddLine("")
 		Recount:AddSortedTooltipData(L["Top 3"].." "..L["Attacked"], data and data.Fights[Recount.db.profile.CurDataSet] and data.Fights[Recount.db.profile.CurDataSet].DamagedWho, 3)
-		if Recount.db.profile.MergePets and data.Pet --[[and dbCombatants[data.Pet[table.getn(data.Pet)] ].Init]] then
-			local petindex = #data.Pet
-			local Damage
-			while not Damage and petindex > 0 do
-				Damage = data.Pet[petindex] and dbCombatants[data.Pet[petindex]] and dbCombatants[data.Pet[petindex]] and dbCombatants[data.Pet[petindex]].Fights and dbCombatants[data.Pet[petindex]].Fights[Recount.db.profile.CurDataSet] and dbCombatants[data.Pet[petindex]].Fights[Recount.db.profile.CurDataSet].Damage
-				petindex = petindex - 1
+		if Recount.db.profile.MergePets and data.Pet then
+			local MaxDamage, MaxPetIndex
+			for i in pairs(data.Pet) do
+				local PetDamage = data.Pet[i] and dbCombatants[data.Pet[i]] and dbCombatants[data.Pet[i]] and dbCombatants[data.Pet[i]].Fights and dbCombatants[data.Pet[i]].Fights[Recount.db.profile.CurDataSet] and dbCombatants[data.Pet[i]].Fights[Recount.db.profile.CurDataSet].Damage
+				if PetDamage and (MaxDamage or 0) <= PetDamage then
+					MaxDamage = PetDamage
+					MaxPetIndex = i
+				end
 			end
 
-			petindex = petindex + 1
-
-			if Damage and Damage ~= 0 then
-				Damage = Damage / (Damage + (data.Fights[Recount.db.profile.CurDataSet].Damage or 0))
+			if MaxDamage and MaxDamage ~= 0 then
+				MaxDamage = MaxDamage / (MaxDamage + (data.Fights[Recount.db.profile.CurDataSet].Damage or 0))
 				GameTooltip:AddLine(" ")
-				GameTooltip:AddDoubleLine(L["Pet"]..":", data.Pet[petindex].." ("..math_floor(Damage * 100 + 0.5).."%)", nil, nil, nil, 1, 1, 1)
-				Recount:AddSortedTooltipData(L["Top 3"].." "..L["Pet Damage Abilities"], dbCombatants[data.Pet[petindex] ].Fights and dbCombatants[data.Pet[petindex] ].Fights[Recount.db.profile.CurDataSet].Attacks, 3)
+				GameTooltip:AddDoubleLine(L["Pet"]..":", data.Pet[MaxPetIndex].." ("..math_floor(MaxDamage * 100 + 0.5).."%)", nil, nil, nil, 1, 1, 1)
+				Recount:AddSortedTooltipData(L["Top 3"].." "..L["Pet Damage Abilities"], dbCombatants[data.Pet[MaxPetIndex]].Fights and dbCombatants[data.Pet[MaxPetIndex]].Fights[Recount.db.profile.CurDataSet].Attacks, 3)
 				GameTooltip:AddLine("")
-				Recount:AddSortedTooltipData(L["Top 3"].." "..L["Pet Attacked"],dbCombatants[data.Pet[petindex] ].Fights and dbCombatants[data.Pet[petindex] ].Fights[Recount.db.profile.CurDataSet].DamagedWho, 3)
+				Recount:AddSortedTooltipData(L["Top 3"].." "..L["Pet Attacked"],dbCombatants[data.Pet[MaxPetIndex]].Fights and dbCombatants[data.Pet[MaxPetIndex]].Fights[Recount.db.profile.CurDataSet].DamagedWho, 3)
 			end
 		end
 
@@ -546,48 +545,45 @@ function TooltipFuncs:Damage(name, data)
 end
 
 function TooltipFuncs:FDamage(name, data)
-	local SortedData, total
 	GameTooltip:ClearLines()
 	GameTooltip:AddLine(name)
-	Recount:AddSortedTooltipData(L["Top 3"].." "..L["Friendly Attacks"],data and data.Fights[Recount.db.profile.CurDataSet] and data.Fights[Recount.db.profile.CurDataSet].FAttacks, 3)
+	Recount:AddSortedTooltipData(L["Top 3"].." "..L["Friendly Attacks"], data and data.Fights[Recount.db.profile.CurDataSet] and data.Fights[Recount.db.profile.CurDataSet].FAttacks, 3)
 	GameTooltip:AddLine("")
-	Recount:AddSortedTooltipData(L["Top 3"].." "..L["Friendly Fired On"],data and data.Fights[Recount.db.profile.CurDataSet] and data.Fights[Recount.db.profile.CurDataSet].FDamagedWho, 3)
+	Recount:AddSortedTooltipData(L["Top 3"].." "..L["Friendly Fired On"], data and data.Fights[Recount.db.profile.CurDataSet] and data.Fights[Recount.db.profile.CurDataSet].FDamagedWho, 3)
 	GameTooltip:AddLine("<"..L["Click for more Details"]..">", 0, 0.9, 0)
 end
 
 function TooltipFuncs:DamageTaken(name, data)
-	local SortedData, total
 	GameTooltip:ClearLines()
 	GameTooltip:AddLine(name)
-	Recount:AddSortedTooltipData(L["Top 3"].." "..L["Attacked by"],data and data.Fights[Recount.db.profile.CurDataSet] and data.Fights[Recount.db.profile.CurDataSet].WhoDamaged, 3)
+	Recount:AddSortedTooltipData(L["Top 3"].." "..L["Attacked by"], data and data.Fights[Recount.db.profile.CurDataSet] and data.Fights[Recount.db.profile.CurDataSet].WhoDamaged, 3)
 	GameTooltip:AddLine("<"..L["Click for more Details"]..">", 0, 0.9, 0)
 end
 
 function TooltipFuncs:Healing(name, data)
 	if data then
-		local SortedData, total
 		GameTooltip:ClearLines()
 		GameTooltip:AddLine(name)
-		Recount:AddSortedTooltipData(L["Top 3"].." "..L["Heals"],data and data.Fights[Recount.db.profile.CurDataSet] and data.Fights[Recount.db.profile.CurDataSet].Heals, 3)
+		Recount:AddSortedTooltipData(L["Top 3"].." "..L["Heals"], data and data.Fights[Recount.db.profile.CurDataSet] and data.Fights[Recount.db.profile.CurDataSet].Heals, 3)
 		GameTooltip:AddLine("")
-		Recount:AddSortedTooltipData(L["Top 3"].." "..L["Healed"],data and data.Fights[Recount.db.profile.CurDataSet] and data.Fights[Recount.db.profile.CurDataSet].HealedWho, 3)
-		if Recount.db.profile.MergePets and data.Pet --[[and dbCombatants[data.Pet[table.getn(data.Pet)] ].Init]] then
-			local petindex = #data.Pet
-			local Healing
-			while not Healing and petindex > 0 do
-				Healing = data.Pet[petindex] and dbCombatants[data.Pet[petindex]] and dbCombatants[data.Pet[petindex]] and dbCombatants[data.Pet[petindex]].Fights and dbCombatants[data.Pet[petindex]].Fights[Recount.db.profile.CurDataSet] and dbCombatants[data.Pet[petindex]].Fights[Recount.db.profile.CurDataSet].Healing
-				petindex = petindex - 1
+		Recount:AddSortedTooltipData(L["Top 3"].." "..L["Healed"], data and data.Fights[Recount.db.profile.CurDataSet] and data.Fights[Recount.db.profile.CurDataSet].HealedWho, 3)
+		if Recount.db.profile.MergePets and data.Pet then
+			local MaxHealing, MaxPetIndex
+			for i in pairs(data.Pet) do
+				local PetHealing = data.Pet[i] and dbCombatants[data.Pet[i]] and dbCombatants[data.Pet[i]] and dbCombatants[data.Pet[i]].Fights and dbCombatants[data.Pet[i]].Fights[Recount.db.profile.CurDataSet] and dbCombatants[data.Pet[i]].Fights[Recount.db.profile.CurDataSet].Healing
+				if PetHealing and (MaxHealing or 0) <= PetHealing then
+					MaxHealing = PetHealing
+					MaxPetIndex = i
+				end
 			end
 
-			petindex = petindex + 1
-
-			if Healing and Healing ~= 0 then
-				Healing = Healing / (Healing + (data.Fights[Recount.db.profile.CurDataSet].Healing or 0))
+			if MaxHealing and MaxHealing ~= 0 then
+				MaxHealing = MaxHealing / (MaxHealing + (data.Fights[Recount.db.profile.CurDataSet].Healing or 0))
 				GameTooltip:AddLine(" ")
-				GameTooltip:AddDoubleLine(L["Pet"]..":",data.Pet[petindex].." ("..math_floor(Healing * 100 + 0.5).."%)", nil, nil, nil, 1, 1, 1)
-				Recount:AddSortedTooltipData(L["Top 3"].." "..L["Pet Healing Abilities"],dbCombatants[data.Pet[petindex] ].Fights and dbCombatants[data.Pet[petindex] ].Fights[Recount.db.profile.CurDataSet].Heals, 3)
+				GameTooltip:AddDoubleLine(L["Pet"]..":", data.Pet[MaxPetIndex].." ("..math_floor(MaxHealing * 100 + 0.5).."%)", nil, nil, nil, 1, 1, 1)
+				Recount:AddSortedTooltipData(L["Top 3"].." "..L["Pet Healing Abilities"],dbCombatants[data.Pet[MaxPetIndex]].Fights and dbCombatants[data.Pet[MaxPetIndex]].Fights[Recount.db.profile.CurDataSet].Heals, 3)
 				GameTooltip:AddLine("")
-				Recount:AddSortedTooltipData(L["Top 3"].." "..L["Pet Healed"],dbCombatants[data.Pet[petindex] ].Fights and dbCombatants[data.Pet[petindex] ].Fights[Recount.db.profile.CurDataSet].HealedWho, 3)
+				Recount:AddSortedTooltipData(L["Top 3"].." "..L["Pet Healed"],dbCombatants[data.Pet[MaxPetIndex]].Fights and dbCombatants[data.Pet[MaxPetIndex]].Fights[Recount.db.profile.CurDataSet].HealedWho, 3)
 			end
 		end
 		GameTooltip:AddLine("<"..L["Click for more Details"]..">", 0, 0.9, 0)
@@ -595,7 +591,6 @@ function TooltipFuncs:Healing(name, data)
 end
 
 function TooltipFuncs:HealingTaken(name, data)
-	local SortedData, total
 	GameTooltip:ClearLines()
 	GameTooltip:AddLine(name)
 	Recount:AddSortedTooltipData(L["Top 3"].." "..L["Healed By"], data and data.Fights[Recount.db.profile.CurDataSet] and data.Fights[Recount.db.profile.CurDataSet].WhoHealed, 3)
@@ -603,7 +598,6 @@ function TooltipFuncs:HealingTaken(name, data)
 end
 
 function TooltipFuncs:Overhealing(name, data)
-	local SortedData, total
 	GameTooltip:ClearLines()
 	GameTooltip:AddLine(name)
 	Recount:AddSortedTooltipData(L["Top 3"].." "..L["Over Heals"], data and data.Fights[Recount.db.profile.CurDataSet] and data.Fights[Recount.db.profile.CurDataSet].OverHeals, 3)
@@ -611,7 +605,6 @@ function TooltipFuncs:Overhealing(name, data)
 end
 
 function TooltipFuncs:DOTs(name, data)
-	local SortedData, total
 	GameTooltip:ClearLines()
 	GameTooltip:AddLine(name)
 	Recount:AddSortedTooltipData(L["Top 3"].." "..L["DOTs"], data and data.Fights[Recount.db.profile.CurDataSet] and data.Fights[Recount.db.profile.CurDataSet].DOTs, 3)
@@ -619,7 +612,6 @@ function TooltipFuncs:DOTs(name, data)
 end
 
 function TooltipFuncs:HOTs(name, data)
-	local SortedData, total
 	GameTooltip:ClearLines()
 	GameTooltip:AddLine(name)
 	Recount:AddSortedTooltipData(L["Top 3"].." "..L["HOTs"], data and data.Fights[Recount.db.profile.CurDataSet] and data.Fights[Recount.db.profile.CurDataSet].HOTs, 3)
@@ -627,7 +619,6 @@ function TooltipFuncs:HOTs(name, data)
 end
 
 function TooltipFuncs:ActiveTime(name, data)
-	local SortedData, total
 	GameTooltip:ClearLines()
 	GameTooltip:AddLine(name)
 	Recount:AddSortedTooltipData(L["Top 3"].." "..L["Attacked/Healed"], data and data.Fights[Recount.db.profile.CurDataSet] and data.Fights[Recount.db.profile.CurDataSet].TimeSpent, 3)
@@ -643,14 +634,12 @@ function TooltipFuncs:ActiveTime(name, data)
 end
 
 function TooltipFuncs:DeathCounts(name, data)
-	local SortedData, total
 	GameTooltip:ClearLines()
 	GameTooltip:AddLine(name)
 	--GameTooltip:Hide()
 end
 
 function TooltipFuncs:Absorbs(name, data)
-	local SortedData, total
 	GameTooltip:ClearLines()
 	GameTooltip:AddLine(name)
 	Recount:AddSortedTooltipData(L["Top 3"].." "..L["Absorbs"], data and data.Fights[Recount.db.profile.CurDataSet] and data.Fights[Recount.db.profile.CurDataSet].Absorbed, 3)

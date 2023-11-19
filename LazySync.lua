@@ -15,9 +15,12 @@ local tonumber = tonumber
 local type = type
 
 local Ambiguate = Ambiguate
+local CreateFrame = CreateFrame
 local GetNumGroupMembers = GetNumGroupMembers
 local GetNumPartyMembers = GetNumPartyMembers or GetNumSubgroupMembers
 local GetNumRaidMembers = GetNumRaidMembers or GetNumGroupMembers
+local IsInGroup = IsInGroup
+local IsInGroup = IsInGroup
 local IsInInstance = IsInInstance
 local IsInRaid = IsInRaid
 local UnitExists = UnitExists

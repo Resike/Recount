@@ -22,6 +22,7 @@ local getmetatable = getmetatable
 local ipairs = ipairs
 local math_floor = math.floor
 local math_fmod = math.fmod
+local next = next
 local pairs = pairs
 local setmetatable = setmetatable
 local string_format = string.format
@@ -33,6 +34,7 @@ local tremove = table.remove
 local type = type
 local unpack = unpack
 
+local C_PetBattles = C_PetBattles
 local GetNumGroupMembers = GetNumGroupMembers
 local GetNumPartyMembers = GetNumPartyMembers or GetNumSubgroupMembers
 local GetNumRaidMembers = GetNumRaidMembers or GetNumGroupMembers
@@ -790,10 +792,12 @@ function Recount:INSTANCE_ENCOUNTER_ENGAGE_UNIT()
 end
 
 function Recount:ReportVersions() -- Elsia: Functionified so GUI can use it too
-	if GetNumGroupMembers() == 0 then
+	if not Recount.lazysync then
+		Recount:Print(L["Sync is disabled."])
+	elseif GetNumGroupMembers() == 0 then
 		Recount:Print(L["No other Recount users found."])
 	else
-		if Recount.VerTable then -- Elsia: Fixed nil error on non sync situation.
+		if Recount.VerTable and next(Recount.VerTable) then -- Elsia: Fixed nil error on non sync situation.
 			Recount:Print(L["Displaying Versions"]..":")
 			for k, v in pairs(Recount.VerTable) do
 				Recount:Print(k.." "..v)
@@ -1393,24 +1397,23 @@ function Recount:SetOwner(who, petName, owner, ownerGUID, ownerFlags)
 	end
 end
 
-Recount.LastGroupCheck = 0
+--Recount.LastGroupCheck = 0
 function Recount:GroupCheck()
-	local gettime = GetTime()
+	--[[local gettime = GetTime()
 	if Recount.LastGroupCheck > gettime and gettime - Recount.LastGroupCheck <= 0.25 then
 		return
 	end
-	Recount.LastGroupCheck = gettime + 0.25
-	for k, v in pairs(dbCombatants) do
-		if k ~= Recount.PlayerName then
-			--local Unit = Recount:GetUnitIDFromName(k)
-			local Unit = UnitInParty(k)
+	Recount.LastGroupCheck = gettime + 0.25--]]
+	for name, v in pairs(dbCombatants) do
+		if name ~= Recount.PlayerName then
 			-- Must be in our group
-			if Unit then
-				v.unit = Unit
+			local unit = Recount:GetUnitIDFromName(name)
+			if unit then
+				v.unit = unit
 				v.type = "Grouped"
 			elseif v.type == "Grouped" then
 				v.type = "Ungrouped"
-				Recount:DeleteVersion(k)
+				Recount:DeleteVersion(name)
 			end
 		end
 	end

@@ -6,6 +6,7 @@ if Recount.Version < revision then
 end
 
 local type = type
+local strsplit = strsplit
 
 local GetNumPartyMembers = GetNumPartyMembers or GetNumSubgroupMembers
 local GetNumRaidMembers = GetNumRaidMembers or GetNumGroupMembers
@@ -42,15 +43,16 @@ function Recount:CheckPartyCombatWithPets()
 	return false
 end
 
-function Recount:GetUnitIDFromName(name)
-	if type(name) ~= "string" then
+function Recount:GetUnitIDFromName(nameRealm)
+	if type(nameRealm) ~= "string" then
 		return nil
 	end -- Bandaid for raid frame issues
-	local realm = name:match("-(.-)")
+	--local realm = strmatch(name, "\\-(.-)")
+	local name, realm = strsplit("-", nameRealm, 2)
 	--[[if realm then
 		name = name:match("(.-)-") -- Strip the realm part for this function
 	end]] -- Resike: This is bad for some pet type detection
-	if UnitExists(name) then -- Elsia: Speed boost, yay
+	--[[if UnitExists(name) then -- Elsia: Speed boost, yay
 		return name
 	else
 		local lname = name:lower()
@@ -58,7 +60,8 @@ function Recount:GetUnitIDFromName(name)
 			return Recount:GetPetPrefixUnit(name, realm)
 		end
 		return nil
-	end
+	end--]]
+	return Recount:GetPetPrefixUnit(name, realm)
 end
 
 function Recount:GetPetPrefixUnit(name, realm)

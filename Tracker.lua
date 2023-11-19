@@ -16,25 +16,34 @@ local math_abs = math.abs
 local math_floor = math.floor
 local math_fmod = math.fmod
 local pairs = pairs
+local strfind = strfind
 local string_lower = string.lower
+local string_match = string.match
 local string_sub = string.sub
 local string_upper = string.upper
-local string_match = string.match
 local tinsert = table.insert
 local tonumber = tonumber
 local type = type
 local unpack = unpack
 
-local ChatThrottleLib = ChatThrottleLib
+local CombatLogGetCurrentEventInfo = CombatLogGetCurrentEventInfo
+local CreateFrame = CreateFrame
+local DeclineName = DeclineName
 local GetFramerate = GetFramerate
+local GetLocale = GetLocale
 local GetNetStats = GetNetStats
+local GetNumDeclensionSets = GetNumDeclensionSets
+local GetNumGroupMembers = GetNumGroupMembers
 local GetSpellInfo = GetSpellInfo
 local GetTime = GetTime
+local IsInRaid = IsInRaid
 local UnitExists = UnitExists
 local UnitHealth = UnitHealth
 local UnitHealthMax = UnitHealthMax
 local UnitIsFeignDeath = UnitIsFeignDeath
 local UnitName = UnitName
+
+local ChatThrottleLib = ChatThrottleLib
 
 local dbCombatants
 
@@ -1264,7 +1273,7 @@ function Recount:AddCurrentEvent(who, eventType, incoming, number, event)
 	local unit = who.unit
 	if not UnitExists(unit) then
 		unit = nil
-	end -- Sometimes there's boolean true in who.unit. It's source should be found and eliminated. After that, this check can be removed.
+	end
 
 	if unit then
 		name, realm = UnitName(unit)
