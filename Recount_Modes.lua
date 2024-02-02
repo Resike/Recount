@@ -536,7 +536,7 @@ function TooltipFuncs:Damage(name, data)
 				GameTooltip:AddDoubleLine(L["Pet"]..":", data.Pet[MaxPetIndex].." ("..math_floor(MaxDamage * 100 + 0.5).."%)", nil, nil, nil, 1, 1, 1)
 				Recount:AddSortedTooltipData(L["Top 3"].." "..L["Pet Damage Abilities"], dbCombatants[data.Pet[MaxPetIndex]].Fights and dbCombatants[data.Pet[MaxPetIndex]].Fights[Recount.db.profile.CurDataSet].Attacks, 3)
 				GameTooltip:AddLine("")
-				Recount:AddSortedTooltipData(L["Top 3"].." "..L["Pet Attacked"],dbCombatants[data.Pet[MaxPetIndex]].Fights and dbCombatants[data.Pet[MaxPetIndex]].Fights[Recount.db.profile.CurDataSet].DamagedWho, 3)
+				Recount:AddSortedTooltipData(L["Top 3"].." "..L["Pet Attacked"], dbCombatants[data.Pet[MaxPetIndex]].Fights and dbCombatants[data.Pet[MaxPetIndex]].Fights[Recount.db.profile.CurDataSet].DamagedWho, 3)
 			end
 		end
 
@@ -581,9 +581,9 @@ function TooltipFuncs:Healing(name, data)
 				MaxHealing = MaxHealing / (MaxHealing + (data.Fights[Recount.db.profile.CurDataSet].Healing or 0))
 				GameTooltip:AddLine(" ")
 				GameTooltip:AddDoubleLine(L["Pet"]..":", data.Pet[MaxPetIndex].." ("..math_floor(MaxHealing * 100 + 0.5).."%)", nil, nil, nil, 1, 1, 1)
-				Recount:AddSortedTooltipData(L["Top 3"].." "..L["Pet Healing Abilities"],dbCombatants[data.Pet[MaxPetIndex]].Fights and dbCombatants[data.Pet[MaxPetIndex]].Fights[Recount.db.profile.CurDataSet].Heals, 3)
+				Recount:AddSortedTooltipData(L["Top 3"].." "..L["Pet Healing Abilities"], dbCombatants[data.Pet[MaxPetIndex]].Fights and dbCombatants[data.Pet[MaxPetIndex]].Fights[Recount.db.profile.CurDataSet].Heals, 3)
 				GameTooltip:AddLine("")
-				Recount:AddSortedTooltipData(L["Top 3"].." "..L["Pet Healed"],dbCombatants[data.Pet[MaxPetIndex]].Fights and dbCombatants[data.Pet[MaxPetIndex]].Fights[Recount.db.profile.CurDataSet].HealedWho, 3)
+				Recount:AddSortedTooltipData(L["Top 3"].." "..L["Pet Healed"], dbCombatants[data.Pet[MaxPetIndex]].Fights and dbCombatants[data.Pet[MaxPetIndex]].Fights[Recount.db.profile.CurDataSet].HealedWho, 3)
 			end
 		end
 		GameTooltip:AddLine("<"..L["Click for more Details"]..">", 0, 0.9, 0)

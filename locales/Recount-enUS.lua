@@ -397,6 +397,7 @@ L["Sync"] = true
 L["sync"] = true
 L["Sync Data"] = true
 L["Sync Options"] = true
+L["Sync is disabled."] = true
 L["Taken"] = true
 L["Threat"] = true
 L["Threat on"] = true
