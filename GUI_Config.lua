@@ -33,7 +33,7 @@ local GameTooltip = GameTooltip
 local RAID_CLASS_COLORS = RAID_CLASS_COLORS
 
 local WOW_RETAIL = WOW_PROJECT_ID == WOW_PROJECT_MAINLINE
-local WOW_WRATHCLASSIC = WOW_PROJECT_ID == WOW_PROJECT_WRATH_CLASSIC or WOW_PROJECT_ID == WOW_PROJECT_BURNING_CRUSADE_CLASSIC
+local WOW_CATACLASSIC = WOW_PROJECT_ID == WOW_PROJECT_CATACLYSM_CLASSIC or WOW_PROJECT_ID == WOW_PROJECT_WRATH_CLASSIC or WOW_PROJECT_ID == WOW_PROJECT_BURNING_CRUSADE_CLASSIC
 
 FillLocalizedClassList(BC, false) -- We are sexist here but not much of a choice, when there is no neutral
 
@@ -62,9 +62,10 @@ local EditableColors = {
 		"Total Bar",
 	},
 	["Class"] = {
-		(WOW_RETAIL or WOW_WRATHCLASSIC) and "Deathknight" or nil,
+		(WOW_RETAIL or WOW_CATACLASSIC) and "Deathknight" or nil,
 		WOW_RETAIL and "Demonhunter" or nil,
 		"Druid",
+		WOW_RETAIL and "Evoker" or nil,
 		"Hunter",
 		"Mage",
 		WOW_RETAIL and "Monk" or nil,
@@ -84,6 +85,7 @@ local ClassStrings = {
 	["DEATHKNIGHT"] = true,
 	["DEMONHUNTER"] = true,
 	["DRUID"] = true,
+	["EVOKER"] = true,
 	["HUNTER"] = true,
 	["MAGE"] = true,
 	["MONK"] = true,
@@ -2080,11 +2082,11 @@ function me:CreateWindowOptions(parent)
 end
 
 function me:CreateConfigWindow()
-	me.ConfigWindow = Recount:CreateFrame("Recount_ConfigWindow", L["Config Recount"], 286 + 16 + 16, 600)
+	me.ConfigWindow = Recount:CreateFrame("Recount_ConfigWindow", L["Config Recount"], 286 + 16 + 16 + 16, 600)
 
 	local theFrame = me.ConfigWindow
 
-	local lineheight = 286 + 16 + 16 - 53 - 1
+	local lineheight = 286 + 16 + 16 + 16 - 53 - 1
 	Recount.Colors:RegisterTexture("Other Windows", "Title", Graph:DrawLine(theFrame, 200, 2, 200, lineheight, 24, {0.5, 0.0, 0.0, 1.0}, "ARTWORK"), {r = 0.5, g = 0.5, b = 0.5, a = 1}) -- Elsia: Changed 32->12 for longer separators given no save/revert
 	Recount.Colors:RegisterTexture("Other Windows", "Title", Graph:DrawLine(theFrame, 400, 2, 400, lineheight, 24, {0.5, 0.0, 0.0, 1.0}, "ARTWORK"), {r = 0.5, g = 0.5, b = 0.5, a = 1})
 	Recount.Colors:RegisterTexture("Other Windows", "Title", Graph:DrawLine(theFrame, 2, lineheight, 598, lineheight, 24, {0.5, 0.0, 0.0, 1.0}, "ARTWORK"), {r = 0.5, g = 0.5, b = 0.5, a = 1})

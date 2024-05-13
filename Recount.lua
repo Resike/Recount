@@ -162,6 +162,7 @@ local Default_Profile = {
 				["DEATHKNIGHT"] = { r = 0.77, g = 0.12, b = 0.23, a = 1 },
 				["MONK"] = { r = 0, g = 1.0, b = 0.59, a = 1 },
 				["DEMONHUNTER"] = { r = 0.64, g = 0.19, b = 0.79, a = 1 },
+				["EVOKER"] = { r = 0.20, g = 0.58, b = 0.50, a = 1 },
 				["PET"] = { r = 0.09, g = 0.61, b = 0.55, a = 1 },
 				--["GUARDIAN"] = { r = 0.61, g = 0.09, b = 0.09 },
 				["MOB"] = { r = 0.58, g = 0.24, b = 0.63, a = 1 },

@@ -18,6 +18,9 @@ local OpacitySliderFrame = OpacitySliderFrame
 
 local RAID_CLASS_COLORS = RAID_CLASS_COLORS
 
+local WOW_RETAIL = WOW_PROJECT_ID == WOW_PROJECT_MAINLINE
+local WOW_CLASSIC = WOW_PROJECT_ID == WOW_PROJECT_CLASSIC
+
 local Colors = {}
 Recount.Colors = Colors
 
@@ -47,7 +50,7 @@ local function Color_Change()
 	if not ColorPickerFrame.hasOpacity then
 		TempColor.a = nil
 	else
-		TempColor.a = 1.0 - OpacitySliderFrame:GetValue()
+		TempColor.a = WOW_RETAIL and ColorPickerFrame.Content.ColorPicker:GetColorAlpha() or 1.0 - OpacitySliderFrame:GetValue()
 	end
 
 	Colors:SetColor(Cur_Branch, Cur_Name, TempColor)
@@ -55,7 +58,7 @@ end
 
 local function Opacity_Change()
 	local r, g, b = ColorPickerFrame:GetColorRGB()
-	local a = 1.0 - OpacitySliderFrame:GetValue()
+	local a = WOW_RETAIL and ColorPickerFrame.Content.ColorPicker:GetColorAlpha() or 1.0 - OpacitySliderFrame:GetValue()
 
 	TempColor.r = r
 	TempColor.g = g
@@ -69,6 +72,11 @@ local function Fake_Change()
 end
 
 local function Color_Cancel()
+	if WOW_RETAIL then
+		ColorPickerFrame.opacity = PreviousColor.a
+		ColorPickerFrame.Content.ColorPicker:SetColorAlpha(ColorPickerFrame.opacity)
+	end
+
 	Colors:SetColor(Cur_Branch, Cur_Name, PreviousColor)
 end
 
@@ -341,23 +349,39 @@ function Colors:EditColor(Branch, Name, Attach)
 
 	ColorPickerFrame:Hide()
 	PlaySound(856)
-	local r, g, b = ColorPickerFrame:GetColorRGB()
 
 	local c = Colors:GetColor(Branch, Name)
 
+	PreviousColor.r, PreviousColor.g, PreviousColor.b, PreviousColor.a = c.r, c.g, c.b, c.a
+
+	if WOW_RETAIL then
+		ColorPickerFrame.Content.ColorSwatchOriginal:SetColorTexture(c.r, c.g, c.b)
+		ColorPickerFrame.Content.ColorPicker:SetColorRGB(c.r, c.g, c.b)
+	else
+		ColorPickerFrame:SetColorRGB(c.r, c.g, c.b)
+	end
+
 	if c.a then
 		ColorPickerFrame.hasOpacity = true
-		ColorPickerFrame.opacity = 1.0 - c.a
+		if WOW_RETAIL then
+			ColorPickerFrame.opacity = c.a
+			ColorPickerFrame.Content.ColorPicker:SetColorAlpha(c.a)
+		else
+			ColorPickerFrame.opacity = 1.0 - c.a
+		end
 		ColorPickerFrame.opacityFunc = Opacity_Change -- Elsia: Was Color_Change
 	else
 		ColorPickerFrame.hasOpacity = false
 		ColorPickerFrame.opacityFunc = nil
 	end
-	ColorPickerFrame.func = Color_Change
 
-	ColorPickerFrame:SetColorRGB(c.r, c.g, c.b)
+	if WOW_RETAIL or WOW_CLASSIC then
+		ColorPickerFrame.swatchFunc = Color_Change
+	else
+		ColorPickerFrame.func = Color_Change
+	end
+
 	--ColorPickerFrame.previousValues = c
-	PreviousColor.r, PreviousColor.g, PreviousColor.b = c.r, c.g, c.b
 	ColorPickerFrame.cancelFunc = Color_Cancel
 
 	ColorPickerFrame:ClearAllPoints()
