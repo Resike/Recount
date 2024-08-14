@@ -35,7 +35,11 @@ local RAID_CLASS_COLORS = RAID_CLASS_COLORS
 local WOW_RETAIL = WOW_PROJECT_ID == WOW_PROJECT_MAINLINE
 local WOW_CATACLASSIC = WOW_PROJECT_ID == WOW_PROJECT_CATACLYSM_CLASSIC or WOW_PROJECT_ID == WOW_PROJECT_WRATH_CLASSIC or WOW_PROJECT_ID == WOW_PROJECT_BURNING_CRUSADE_CLASSIC
 
-FillLocalizedClassList(BC, false) -- We are sexist here but not much of a choice, when there is no neutral
+if FillLocalizedClassList then
+	FillLocalizedClassList(BC, false) -- We are sexist here but not much of a choice, when there is no neutral
+elseif LocalizedClassList then
+	BC = LocalizedClassList(false)
+end
 
 -- Elsia: Note, most strings here haven't been localized. Need to grab all button and text labels here and put into localization registration.
 -- Just started with the color selection ones to give an example. See Recount.lua.
