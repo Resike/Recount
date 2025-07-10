@@ -19,7 +19,8 @@ local OpacitySliderFrame = OpacitySliderFrame
 local RAID_CLASS_COLORS = RAID_CLASS_COLORS
 
 local WOW_RETAIL = WOW_PROJECT_ID == WOW_PROJECT_MAINLINE
-local WOW_CLASSIC = WOW_PROJECT_ID == WOW_PROJECT_CLASSIC
+local WOW_PANDA_CLASSIC = WOW_PROJECT_ID == WOW_PROJECT_MISTS_CLASSIC
+local WOW_VANILLA_CLASSIC = WOW_PROJECT_ID == WOW_PROJECT_CLASSIC
 
 local Colors = {}
 Recount.Colors = Colors
@@ -375,7 +376,7 @@ function Colors:EditColor(Branch, Name, Attach)
 		ColorPickerFrame.opacityFunc = nil
 	end
 
-	if WOW_RETAIL or WOW_CLASSIC then
+	if WOW_RETAIL or WOW_VANILLA_CLASSIC then
 		ColorPickerFrame.swatchFunc = Color_Change
 	else
 		ColorPickerFrame.func = Color_Change
@@ -410,6 +411,9 @@ function Colors:EditColor(Branch, Name, Attach)
 		ColorPickerFrame:SetPoint(oside, Attach, side, 0, 0)
 	end
 	ColorPickerFrame:Show()
+	if WOW_PANDA_CLASSIC then
+		ColorPickerFrame.swatchFunc = ColorPickerFrame.func
+	end
 end
 
 --[[function Colors:Debug()

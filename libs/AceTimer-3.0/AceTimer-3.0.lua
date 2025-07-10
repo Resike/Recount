@@ -15,7 +15,7 @@
 -- make into AceTimer.
 -- @class file
 -- @name AceTimer-3.0
--- @release $Id: AceTimer-3.0.lua 1342 2024-05-26 11:49:35Z nevcairiel $
+-- @release $Id$
 
 local MAJOR, MINOR = "AceTimer-3.0", 17 -- Bump minor on changes
 local AceTimer, oldminor = LibStub:NewLibrary(MAJOR, MINOR)

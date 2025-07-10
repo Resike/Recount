@@ -42,7 +42,7 @@ local FauxScrollFrame_OnVerticalScroll = FauxScrollFrame_OnVerticalScroll
 local UIDropDownMenu_AddButton = UIDropDownMenu_AddButton
 local UIDropDownMenu_SetAnchor = UIDropDownMenu_SetAnchor
 
-local WOW_RETAIL = WOW_PROJECT_ID == WOW_PROJECT_MAINLINE
+local WOW_PANDA_CLASSIC = WOW_PROJECT_ID == WOW_PROJECT_MISTS_CLASSIC
 
 local me = {}
 
@@ -652,7 +652,7 @@ function Recount:CreateMainWindow()
 			Recount:CancelTimer(Recount.MainWindow.timeid)
 			Recount.MainWindow.timeid = nil
 		end
-		if not UIParent:IsShown() or (WOW_RETAIL and C_PetBattles.IsInBattle() or false) then
+		if not UIParent:IsShown() or (WOW_PANDA_CLASSIC and C_PetBattles.IsInBattle() or false) then
 			return
 		end
 		Recount.db.profile.MainWindowVis = false
