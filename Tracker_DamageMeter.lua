@@ -204,15 +204,12 @@ local function ResolveName(source, orderIndex)
 		return UnitName("player")
 	end
 
-	-- Try roster matching by order (best effort during combat)
-	RefreshRosterCache()
-	local rosterNames = {}
-	for rName in pairs(rosterCache) do
-		rosterNames[#rosterNames + 1] = rName
-	end
-	table.sort(rosterNames)
-	if orderIndex and rosterNames[orderIndex] then
-		return rosterNames[orderIndex]
+	-- For other live group members, keep an opaque internal key and render the
+	-- secret name directly in the UI. Realtime session rows are damage-sorted, so
+	-- guessing from party order is unreliable and causes identity swaps.
+	local guid = SafeString(source.sourceGUID)
+	if guid then
+		return PROXY_PREFIX .. guid
 	end
 
 	return PROXY_PREFIX .. tostring(orderIndex or 0)
