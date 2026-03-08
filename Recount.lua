@@ -53,7 +53,6 @@ local UnitName = UnitName
 
 local CreateFrame = CreateFrame
 
-local InterfaceOptionsFrame = InterfaceOptionsFrame
 local UIParent = UIParent
 
 local RecountTempTooltip = RecountTempTooltip

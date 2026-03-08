@@ -1,5 +1,6 @@
-## Interface: 110107
-## Version: v11.1.7a
+## Interface: 120001
+## Version: v12.0.1a
+## IconTexture: Interface\Icons\Ability_Warrior_Rampage
 ## Title: Recount
 ## Notes: Records Damage and Healing for Graph Based Display.
 ## Notes-ruRU: Записывает урон и исцеления и отоброжает различные графики.

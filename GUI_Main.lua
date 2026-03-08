@@ -31,7 +31,14 @@ local IsAltKeyDown = IsAltKeyDown
 local IsControlKeyDown = IsControlKeyDown
 local IsShiftKeyDown = IsShiftKeyDown
 local SendChatMessage = SendChatMessage
-local UIFrameFade = UIFrameFade
+local UIFrameFade = UIFrameFade or function(frame, fadeInfo)
+	if fadeInfo.mode == "OUT" then
+		frame:SetAlpha(0)
+	end
+	if fadeInfo.finishedFunc then
+		fadeInfo.finishedFunc(fadeInfo.finishedArg1)
+	end
+end
 
 local GameTooltip = GameTooltip
 local UIParent = UIParent
@@ -1170,11 +1177,11 @@ function Recount:RefreshMainWindow(datarefresh)
 	end
 
 	local RowWidth = MainWindow:GetWidth() - 4
-	if table.getn(dispTable) > MainWindow.CurRows and MainWindow_Settings.ShowScrollbar == true then
+	if #(dispTable) > MainWindow.CurRows and MainWindow_Settings.ShowScrollbar == true then
 		RowWidth = MainWindow:GetWidth() - 23
 	end
 
-	FauxScrollFrame_Update(MainWindow.ScrollBar, table.getn(dispTable), Recount.MainWindow.CurRows, 20)
+	FauxScrollFrame_Update(MainWindow.ScrollBar, #(dispTable), Recount.MainWindow.CurRows, 20)
 	local offset = FauxScrollFrame_GetOffset(MainWindow.ScrollBar)
 
 	if type(MainWindow.SpecialTotal) == "function" then

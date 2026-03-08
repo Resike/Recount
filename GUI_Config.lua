@@ -750,7 +750,7 @@ end
 
 function me:RefreshStatusBars()
 	local BarTextures = SM:List("statusbar")
-	local size = table.getn(BarTextures)
+	local size = #(BarTextures)
 
 	FauxScrollFrame_Update(me.TextureOptions.ScrollBar, size, 13, 12)
 	local offset = FauxScrollFrame_GetOffset(me.TextureOptions.ScrollBar)
@@ -1009,7 +1009,7 @@ function me:CreateTextureSelection(parent)
 	end
 	me:UpdateStatusBars()
 
-	if table.getn(BarTextures) <= 13 then
+	if #(BarTextures) <= 13 then
 		for i = 1, 13 do
 			theFrame.Rows[i]:SetWidth(196)
 			theFrame.Rows[i]:SetPoint("TOP", theFrame, "TOP", 0, -i * 14 - 2)
@@ -1071,7 +1071,7 @@ end
 
 function me:RefreshFonts()
 	local Fonts = SM:List("font")
-	local size = table.getn(Fonts)
+	local size = #(Fonts)
 
 	FauxScrollFrame_Update(me.FontOptions.ScrollBar, size, 13, 12)
 	local offset = FauxScrollFrame_GetOffset(me.FontOptions.ScrollBar)
@@ -1106,7 +1106,7 @@ function me:CreateFontSelection(parent)
 	end
 	me:UpdateFonts()
 
-	if table.getn(Fonts) <= 13 then
+	if #(Fonts) <= 13 then
 		for i = 1, 13 do
 			theFrame.Rows[i]:SetWidth(196)
 			theFrame.Rows[i]:SetPoint("TOP", theFrame, "TOP", 0, -i * 14 - 2)

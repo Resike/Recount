@@ -431,7 +431,7 @@ function me:RefreshDeathDetails()
 	local size
 
 	if Data then
-		size = table.getn(Data)
+		size = #(Data)
 	else
 		size = 0
 	end
