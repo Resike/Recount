@@ -35,7 +35,11 @@ local RAID_CLASS_COLORS = RAID_CLASS_COLORS
 local WOW_RETAIL = WOW_PROJECT_ID == WOW_PROJECT_MAINLINE
 local WOW_PANDA_CLASSIC = WOW_PROJECT_ID == WOW_PROJECT_MISTS_CLASSIC or WOW_PROJECT_ID == WOW_PROJECT_CATACLYSM_CLASSIC or WOW_PROJECT_ID == WOW_PROJECT_WRATH_CLASSIC or WOW_PROJECT_ID == WOW_PROJECT_BURNING_CRUSADE_CLASSIC
 
-if FillLocalizedClassList then
+if LOCALIZED_CLASS_NAMES_MALE then
+	for k, v in pairs(LOCALIZED_CLASS_NAMES_MALE) do
+		BC[k] = v
+	end
+elseif FillLocalizedClassList then
 	FillLocalizedClassList(BC, false) -- We are sexist here but not much of a choice, when there is no neutral
 elseif LocalizedClassList then
 	BC = LocalizedClassList(false)
