@@ -671,6 +671,26 @@ local MainWindowModes = {
 	{L["Activity"], DataModes.ActiveTime, TooltipFuncs.ActiveTime, nil, nil, nil, nil},
 }
 
+local DamageMeterSupportedModes = {
+	[L["Damage Done"]] = true,
+	[L["DPS"]] = true,
+	[L["Damage Taken"]] = true,
+	[L["Healing Done"]] = true,
+	[L["Absorbs"]] = true,
+	[L["Deaths"]] = true,
+	[L["Activity"]] = true,
+	[L["Interrupts"]] = true,
+	[L["Dispels"]] = true,
+}
+
+local function IsDamageMeterSupportedMode(modeName)
+	if not Recount.UseDamageMeter then
+		return true
+	end
+
+	return DamageMeterSupportedModes[modeName] == true
+end
+
 function Recount:AddModeTooltip(lname, modefunc, toolfunc, ...)
 	tinsert(MainWindowModes, {lname, modefunc, toolfunc, ...})
 	Recount:SetupMainWindow()
@@ -782,6 +802,13 @@ function Recount:SetupMainWindow()
 		else
 			for k, v in pairs(MainWindowModes) do
 				if MainWindowModes[k][1] == L["Activity"] then
+					MainWindowModes[k] = nil
+				end
+			end
+		end
+		if Recount.UseDamageMeter then
+			for k, v in pairs(MainWindowModes) do
+				if v and not IsDamageMeterSupportedMode(v[1]) then
 					MainWindowModes[k] = nil
 				end
 			end

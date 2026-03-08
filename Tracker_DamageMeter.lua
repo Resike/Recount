@@ -80,6 +80,20 @@ local updateTicker = nil
 local IsSecret
 local SafeCombatCall
 local PROXY_PREFIX = "__RECOUNT_DM__"
+local overallBaseline = {}
+
+local TRACKED_TOTAL_FIELDS = {
+	"Damage",
+	"Healing",
+	"Absorbs",
+	"DamageTaken",
+	"Interrupts",
+	"Dispels",
+	"DeathCount",
+	"ActiveTime",
+	"TimeDamage",
+	"TimeHeal",
+}
 
 -- Secret value display cache, keyed by mode then combatant name.
 -- Raw secret values are only used for UI text while synthetic numeric values drive sorting.
@@ -89,6 +103,45 @@ local function ClearSecretDisplayValues()
 	for _, modeData in pairs(secretDisplayValues) do
 		wipe(modeData)
 	end
+end
+
+local function ClearOverallBaseline()
+	wipe(overallBaseline)
+end
+
+local function CaptureOverallBaseline()
+	ClearOverallBaseline()
+	if not dbCombatants then
+		return
+	end
+
+	for name, who in pairs(dbCombatants) do
+		local fightData = who and who.Fights and who.Fights.OverallData
+		local baseline = {}
+		for _, field in ipairs(TRACKED_TOTAL_FIELDS) do
+			baseline[field] = fightData and fightData[field] or 0
+		end
+		overallBaseline[name] = baseline
+	end
+end
+
+local function GetOverallBaseline(who, field)
+	if not who or not field or not who.Name then
+		return 0
+	end
+
+	local baseline = overallBaseline[who.Name]
+	if not baseline then
+		baseline = {}
+		overallBaseline[who.Name] = baseline
+	end
+
+	if baseline[field] == nil then
+		local fightData = who.Fights and who.Fights.OverallData
+		baseline[field] = fightData and fightData[field] or 0
+	end
+
+	return baseline[field] or 0
 end
 
 local function StoreSecretValue(modeKey, combatantName, rawValue, rawPerSec, rawLabel)
@@ -301,8 +354,16 @@ local function GetSession(dmType)
 end
 
 -- Get spell source data for a combatant
-local function GetSpellSource(dmType, guid)
+local function GetSpellSource(dmType, guid, sessionType)
 	local ok, sourceData
+
+	if sessionType == DM_Overall then
+		ok, sourceData = pcall(C_DamageMeter.GetCombatSessionSourceFromType, DM_Overall, dmType, guid)
+		if ok and sourceData and sourceData.combatSpells and #sourceData.combatSpells > 0 then
+			return sourceData
+		end
+		return nil
+	end
 
 	if combatSessionID then
 		ok, sourceData = pcall(C_DamageMeter.GetCombatSessionSourceFromID, combatSessionID, dmType, guid)
@@ -324,21 +385,13 @@ local function GetSpellSource(dmType, guid)
 	return nil
 end
 
--- Add spell breakdown data for a combatant
-local function AddSpellBreakdown(who, dmType, datatypeAttacks)
-	if not who then return end
-
-	local guid = who.GUID
-	if not guid or IsSecret(guid) then
-		DP("  No GUID for spell lookup: " .. (who.Name or "?"))
-		return
+local function ApplySpellBreakdown(fightData, sourceData, datatypeAttacks)
+	if not fightData or not datatypeAttacks or not sourceData or not sourceData.combatSpells then
+		return 0
 	end
 
-	local sourceData = GetSpellSource(dmType, guid)
-	if not sourceData or not sourceData.combatSpells then
-		DP("  No spell source data for " .. (who.Name or "?") .. " dmType=" .. dmType .. " guid=" .. guid)
-		return
-	end
+	fightData[datatypeAttacks] = fightData[datatypeAttacks] or {}
+	wipe(fightData[datatypeAttacks])
 
 	local spellCount = 0
 	for _, spell in ipairs(sourceData.combatSpells) do
@@ -352,29 +405,47 @@ local function AddSpellBreakdown(who, dmType, datatypeAttacks)
 			end
 			spellName = spellName or ("Spell " .. spellID)
 
-			if datatypeAttacks and who.Fights then
-				for _, fightKey in ipairs({"CurrentFightData", "OverallData"}) do
-					local fightData = who.Fights[fightKey]
-					if fightData then
-						fightData[datatypeAttacks] = fightData[datatypeAttacks] or {}
-						fightData[datatypeAttacks][spellName] = {
-							count = 1,
-							amount = amount,
-							Details = {
-								["Hit"] = {
-									count = 1,
-									amount = amount,
-									max = amount,
-									min = amount,
-								}
-							}
-						}
-					end
-				end
-			end
+			fightData[datatypeAttacks][spellName] = {
+				count = 1,
+				amount = amount,
+				Details = {
+					["Hit"] = {
+						count = 1,
+						amount = amount,
+						max = amount,
+						min = amount,
+					}
+				}
+			}
 			spellCount = spellCount + 1
 		end
 	end
+
+	return spellCount
+end
+
+-- Add spell breakdown data for a combatant
+local function AddSpellBreakdown(who, dmType, datatypeAttacks)
+	if not who then return end
+
+	local guid = who.GUID
+	if not guid or IsSecret(guid) then
+		DP("  No GUID for spell lookup: " .. (who.Name or "?"))
+		return
+	end
+
+	local currentSource = GetSpellSource(dmType, guid, DM_Current)
+	if currentSource then
+		ApplySpellBreakdown(who.Fights and who.Fights.CurrentFightData, currentSource, datatypeAttacks)
+	end
+
+	local overallSource = GetSpellSource(dmType, guid, DM_Overall)
+	if not overallSource or not overallSource.combatSpells then
+		DP("  No spell source data for " .. (who.Name or "?") .. " dmType=" .. dmType .. " guid=" .. guid)
+		return
+	end
+
+	local spellCount = ApplySpellBreakdown(who.Fights and who.Fights.OverallData, overallSource, datatypeAttacks)
 	DP("  Spells for " .. (who.Name or "?") .. " dmType=" .. dmType .. ": " .. spellCount)
 end
 
@@ -400,6 +471,25 @@ local function SnapshotSession(verbose)
 		sessionDuration = math.max(0.1, GetTime() - Recount.InCombatT2)
 	end
 
+	local function SetTrackedValue(who, dataField, amount, rateField, perSec)
+		if not who or not who.Fights then
+			return
+		end
+
+		local currentFight = who.Fights.CurrentFightData
+		local overallFight = who.Fights.OverallData
+		if not currentFight or not overallFight then
+			return
+		end
+
+		currentFight[dataField] = amount
+		overallFight[dataField] = GetOverallBaseline(who, dataField) + amount
+		if rateField then
+			currentFight[rateField] = perSec
+			overallFight[rateField] = perSec
+		end
+	end
+
 	local hasSecrets = false
 	for i, source in ipairs(session.combatSources) do
 		-- Check if values are secret (API sorts sources highest-first)
@@ -415,10 +505,7 @@ local function SnapshotSession(verbose)
 			local amount = GetDisplayNumber(source.totalAmount, i)
 			local dps = GetDisplayNumber(source.amountPerSecond, i)
 			if amount > 0 or dps > 0 then
-				who.Fights.CurrentFightData.Damage = amount
-				who.Fights.CurrentFightData.DamagePerSecond = dps
-				who.Fights.OverallData.Damage = amount
-				who.Fights.OverallData.DamagePerSecond = dps
+				SetTrackedValue(who, "Damage", amount, "DamagePerSecond", dps)
 				who.LastFightIn = Recount.db2.FightNum
 				foundAny = true
 
@@ -448,9 +535,9 @@ local function SnapshotSession(verbose)
 				who.Fights.CurrentFightData.ActiveTime = sessionDuration
 				who.Fights.CurrentFightData.TimeDamage = sessionDuration
 				who.Fights.CurrentFightData.TimeHeal = sessionDuration
-				who.Fights.OverallData.ActiveTime = sessionDuration
-				who.Fights.OverallData.TimeDamage = sessionDuration
-				who.Fights.OverallData.TimeHeal = sessionDuration
+				who.Fights.OverallData.ActiveTime = GetOverallBaseline(who, "ActiveTime") + sessionDuration
+				who.Fights.OverallData.TimeDamage = GetOverallBaseline(who, "TimeDamage") + sessionDuration
+				who.Fights.OverallData.TimeHeal = GetOverallBaseline(who, "TimeHeal") + sessionDuration
 			end
 		end
 	end
@@ -464,12 +551,7 @@ local function SnapshotSession(verbose)
 					local amount = GetDisplayNumber(source.totalAmount, idx)
 					local perSec = rateField and GetDisplayNumber(source.amountPerSecond, idx) or 0
 					if amount > 0 or perSec > 0 then
-						who.Fights.CurrentFightData[dataField] = amount
-						who.Fights.OverallData[dataField] = amount
-						if rateField then
-							who.Fights.CurrentFightData[rateField] = perSec
-							who.Fights.OverallData[rateField] = perSec
-						end
+						SetTrackedValue(who, dataField, amount, rateField, perSec)
 						who.LastFightIn = Recount.db2.FightNum
 						foundAny = true
 						if who.Name and secretKey then
@@ -492,30 +574,12 @@ local function SnapshotSession(verbose)
 	return foundAny
 end
 
--- Full parse: snapshot + copy to OverallData + spell breakdowns
+-- Full parse: final snapshot + spell breakdowns
 local function ParseSessionFull()
 	DP("ParseSessionFull: combatSessionID=" .. tostring(combatSessionID))
 	local foundAny = SnapshotSession(true)
 
 	if foundAny then
-		-- Copy CurrentFightData to OverallData
-		for _, who in pairs(dbCombatants) do
-			if who.LastFightIn == Recount.db2.FightNum and who.Fights and who.Fights.CurrentFightData then
-				who.Fights.OverallData = who.Fights.OverallData or {}
-				local cur = who.Fights.CurrentFightData
-				local ovr = who.Fights.OverallData
-				for _, field in ipairs({"Damage", "DamagePerSecond", "Healing", "HealingPerSecond", "Absorbs", "AbsorbPerSecond", "DamageTaken", "DamageTakenPerSecond", "Interrupts", "Dispels", "DeathCount", "ActiveTime", "TimeDamage", "TimeHeal"}) do
-					if cur[field] and cur[field] > 0 then
-						if field == "DamagePerSecond" or field == "HealingPerSecond" or field == "AbsorbPerSecond" or field == "DamageTakenPerSecond" then
-							ovr[field] = cur[field]
-						else
-							ovr[field] = (ovr[field] or 0) + cur[field]
-						end
-					end
-				end
-			end
-		end
-
 		-- Spell breakdowns
 		for _, who in pairs(dbCombatants) do
 			if who.LastFightIn == Recount.db2.FightNum then
@@ -622,6 +686,7 @@ local function OnEvent(self, event, ...)
 		ClearSecretDisplayValues()
 		ClearProxyCombatants()
 		Recount:PutInCombat()
+		CaptureOverallBaseline()
 		StartUpdateTicker()
 
 	elseif event == "PLAYER_REGEN_ENABLED" then
@@ -641,6 +706,7 @@ local function OnEvent(self, event, ...)
 
 	elseif event == "DAMAGE_METER_RESET" then
 		DP("DAMAGE_METER_RESET")
+		ClearOverallBaseline()
 		if not Recount._resettingData then
 			Recount:ResetData()
 		end
@@ -678,6 +744,7 @@ function Recount:ResetDataUnsafe()
 	combatSessionID = nil
 	ClearSecretDisplayValues()
 	ClearProxyCombatants()
+	ClearOverallBaseline()
 	DP("ResetDataUnsafe complete")
 end
 
@@ -731,6 +798,14 @@ local function GetMainWindowSecretEntry(modeData, combatantName)
 		return GetSecretValue("Absorbs", combatantName), false
 	end
 
+	if modeName == L["Interrupts"] then
+		return GetSecretValue("Interrupts", combatantName), false
+	end
+
+	if modeName == L["Dispels"] then
+		return GetSecretValue("Dispels", combatantName), false
+	end
+
 	if modeName == L["Deaths"] then
 		return GetSecretValue("Deaths", combatantName), false
 	end
@@ -776,6 +851,39 @@ function Recount:GetMainWindowBarTextOverride(combatant, modeIndex)
 	end
 
 	local modeData = self.MainWindowData and self.MainWindowData[modeIndex]
+	local modeCategory = modeData and modeData[7]
+	if modeCategory == "Healing" and self.db and self.db.profile and self.db.profile.MergeAbsorbs then
+		local healingEntry = GetSecretValue("Healing", combatantName)
+		local absorbEntry = GetSecretValue("Absorbs", combatantName)
+		if healingEntry or absorbEntry then
+			local healingValueText = FormatRealtimeValue(healingEntry and healingEntry.value)
+			local absorbValueText = FormatRealtimeValue(absorbEntry and absorbEntry.value)
+
+			if healingEntry and absorbEntry and not IsSecret(healingEntry.value) and not IsSecret(absorbEntry.value) then
+				healingValueText = Recount:FormatLongNums(SafeNumber(healingEntry.value) + SafeNumber(absorbEntry.value))
+				absorbValueText = nil
+			end
+
+			if healingValueText then
+				local valueText = absorbValueText and string_format("%s + %s", healingValueText, absorbValueText) or healingValueText
+				local barText = self.db and self.db.profile and self.db.profile.MainWindow and self.db.profile.MainWindow.BarText
+				if barText and barText.PerSec then
+					local healingPerSecText = FormatRealtimeValue(healingEntry and healingEntry.perSec)
+					local absorbPerSecText = FormatRealtimeValue(absorbEntry and absorbEntry.perSec)
+					if healingEntry and absorbEntry and healingPerSecText and absorbPerSecText and not IsSecret(healingEntry.perSec) and not IsSecret(absorbEntry.perSec) then
+						healingPerSecText = Recount:FormatLongNums(SafeNumber(healingEntry.perSec) + SafeNumber(absorbEntry.perSec))
+						absorbPerSecText = nil
+					end
+					if healingPerSecText then
+						local perSecText = absorbPerSecText and string_format("%s + %s", healingPerSecText, absorbPerSecText) or healingPerSecText
+						return string_format("%s (%s)", valueText, perSecText)
+					end
+				end
+				return valueText
+			end
+		end
+	end
+
 	local entry, useRate = GetMainWindowSecretEntry(modeData, combatantName)
 	if not entry then
 		return nil
