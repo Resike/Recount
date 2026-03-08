@@ -30,7 +30,7 @@ local GetScreenWidth = GetScreenWidth
 local IsAltKeyDown = IsAltKeyDown
 local IsControlKeyDown = IsControlKeyDown
 local IsShiftKeyDown = IsShiftKeyDown
-local SendChatMessage = SendChatMessage
+local SendChatMessage = (C_ChatInfo and C_ChatInfo.SendChatMessage) or SendChatMessage
 local UIFrameFade = UIFrameFade or function(frame, fadeInfo)
 	if fadeInfo.mode == "OUT" then
 		frame:SetAlpha(0)

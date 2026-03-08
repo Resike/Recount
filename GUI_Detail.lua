@@ -20,7 +20,7 @@ local wipe = wipe
 
 
 local CreateFrame = CreateFrame
-local SendChatMessage = SendChatMessage
+local SendChatMessage = (C_ChatInfo and C_ChatInfo.SendChatMessage) or SendChatMessage
 local BNSendWhisper = BNSendWhisper
 
 local UIParent = UIParent
