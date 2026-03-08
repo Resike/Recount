@@ -38,6 +38,14 @@ local C_PetBattles = C_PetBattles
 local GetNumGroupMembers = GetNumGroupMembers
 local GetNumPartyMembers = GetNumPartyMembers or GetNumSubgroupMembers
 local GetNumRaidMembers = GetNumRaidMembers or GetNumGroupMembers
+local USE_NATIVE_DAMAGE_METER = C_DamageMeter ~= nil
+
+local function LegacyBindingLabel(label)
+	if USE_NATIVE_DAMAGE_METER then
+		return nil
+	end
+	return L["Display"].." "..L[label]
+end
 local GetTime = GetTime
 local IsInRaid = IsInRaid
 local UnitAffectingCombat = UnitAffectingCombat
@@ -208,11 +216,11 @@ local Default_Profile = {
 		Font = "Arial Narrow",
 		Scaling = 1,
 		Modules = {
-			HealingTaken = true,
-			OverhealingDone = true,
+			HealingTaken = not USE_NATIVE_DAMAGE_METER,
+			OverhealingDone = not USE_NATIVE_DAMAGE_METER,
 			Deaths = true,
-			DOTUptime = true,
-			HOTUptime = true,
+			DOTUptime = not USE_NATIVE_DAMAGE_METER,
+			HOTUptime = not USE_NATIVE_DAMAGE_METER,
 			Activity = true,
 		},
 		MainWindow = {
@@ -330,28 +338,28 @@ BINDING_NAME_RECOUNT_PREVIOUSPAGE = L["Show previous main page"]
 BINDING_NAME_RECOUNT_NEXTPAGE = L["Show next main page"]
 BINDING_NAME_RECOUNT_DAMAGE = L["Display"].." "..L["Damage Done"]
 BINDING_NAME_RECOUNT_DPS = L["Display"].." "..L["DPS"]
-BINDING_NAME_RECOUNT_FRIENDLYFIRE = L["Display"].." "..L["Friendly Fire"]
+BINDING_NAME_RECOUNT_FRIENDLYFIRE = LegacyBindingLabel("Friendly Fire")
 BINDING_NAME_RECOUNT_DAMAGETAKEN = L["Display"].." "..L["Damage Taken"]
 BINDING_NAME_RECOUNT_HEALING = L["Display"].." "..L["Healing Done"]
-BINDING_NAME_RECOUNT_HEALINGTAKEN = L["Display"].." "..L["Healing Taken"]
-BINDING_NAME_RECOUNT_OVERHEALING = L["Display"].." "..L["Overhealing Done"]
+BINDING_NAME_RECOUNT_HEALINGTAKEN = LegacyBindingLabel("Healing Taken")
+BINDING_NAME_RECOUNT_OVERHEALING = LegacyBindingLabel("Overhealing Done")
 BINDING_NAME_RECOUNT_DEATHS = L["Display"].." "..L["Deaths"]
-BINDING_NAME_RECOUNT_DOTS = L["Display"].." "..L["DOT Uptime"]
-BINDING_NAME_RECOUNT_HOTS = L["Display"].." "..L["HOT Uptime"]
+BINDING_NAME_RECOUNT_DOTS = LegacyBindingLabel("DOT Uptime")
+BINDING_NAME_RECOUNT_HOTS = LegacyBindingLabel("HOT Uptime")
 BINDING_NAME_RECOUNT_ACTIVITY = L["Display"].." "..L["Activity"]
 BINDING_NAME_RECOUNT_DISPELS = L["Display"].." "..L["Dispels"]
-BINDING_NAME_RECOUNT_DISPELLED = L["Display"].." "..L["Dispelled"]
+BINDING_NAME_RECOUNT_DISPELLED = LegacyBindingLabel("Dispelled")
 BINDING_NAME_RECOUNT_INTERRUPTS = L["Display"].." "..L["Interrupts"]
-BINDING_NAME_RECOUNT_RESURRECT = L["Display"].." "..L["Ressers"]
-BINDING_NAME_RECOUNT_CCBREAKER = L["Display"].." "..L["CC Breakers"]
-BINDING_NAME_RECOUNT_MANA = L["Display"].." "..L["Mana Gained"]
-BINDING_NAME_RECOUNT_ENERGY = L["Display"].." "..L["Energy Gained"]
-BINDING_NAME_RECOUNT_RAGE = L["Display"].." "..L["Rage Gained"]
-BINDING_NAME_RECOUNT_RUNICPOWER = L["Display"].." "..L["Runic Power Gained"]
-BINDING_NAME_RECOUNT_LUNAR_POWER = L["Display"].." "..L["Astral Power Gained"]
-BINDING_NAME_RECOUNT_MAELSTROM = L["Display"].." "..L["Maelstorm Gained"]
-BINDING_NAME_RECOUNT_FURY = L["Display"].." "..L["Fury Gained"]
-BINDING_NAME_RECOUNT_PAIN = L["Display"].." "..L["Pain Gained"]
+BINDING_NAME_RECOUNT_RESURRECT = LegacyBindingLabel("Ressers")
+BINDING_NAME_RECOUNT_CCBREAKER = LegacyBindingLabel("CC Breakers")
+BINDING_NAME_RECOUNT_MANA = LegacyBindingLabel("Mana Gained")
+BINDING_NAME_RECOUNT_ENERGY = LegacyBindingLabel("Energy Gained")
+BINDING_NAME_RECOUNT_RAGE = LegacyBindingLabel("Rage Gained")
+BINDING_NAME_RECOUNT_RUNICPOWER = LegacyBindingLabel("Runic Power Gained")
+BINDING_NAME_RECOUNT_LUNAR_POWER = LegacyBindingLabel("Astral Power Gained")
+BINDING_NAME_RECOUNT_MAELSTROM = LegacyBindingLabel("Maelstorm Gained")
+BINDING_NAME_RECOUNT_FURY = LegacyBindingLabel("Fury Gained")
+BINDING_NAME_RECOUNT_PAIN = LegacyBindingLabel("Pain Gained")
 
 BINDING_NAME_RECOUNT_REPORT_MAIN = L["Report the Main Window Data"]
 BINDING_NAME_RECOUNT_REPORT_DETAILS = L["Report the Detail Window Data"]
@@ -758,6 +766,9 @@ Recount.consoleOptions2.args.realtime = {
 					name = L["HTPS"],
 					desc = L["Tracks Raid Healing Taken Per Second"],
 					type = 'execute',
+					hidden = function()
+						return USE_NATIVE_DAMAGE_METER
+					end,
 					func = function()
 						Recount:CreateRealtimeWindow("!RAID", "HEALINGTAKEN", "Raid HTPS")
 					end
@@ -1735,6 +1746,12 @@ function Recount:OnInitialize()
 	Recount.db2 = RecountPerCharDB
 	Recount.db2.char = nil -- Elsia: Dump old db data hard.
 	Recount.db2.global = nil
+	if USE_NATIVE_DAMAGE_METER then
+		Recount.db.profile.Modules.HealingTaken = false
+		Recount.db.profile.Modules.OverhealingDone = false
+		Recount.db.profile.Modules.DOTUptime = false
+		Recount.db.profile.Modules.HOTUptime = false
+	end
 	Recount:InitCombatData()
 	Recount.LocalizeCombatants()
 	self.db.RegisterCallback( self, "OnNewProfile", "HandleProfileChanges" )

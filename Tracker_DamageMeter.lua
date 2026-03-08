@@ -80,6 +80,7 @@ local updateTicker = nil
 local IsSecret
 local SafeCombatCall
 local PROXY_PREFIX = "__RECOUNT_DM__"
+local GENERIC_FIGHT_NAME = "Trash Combat"
 local overallBaseline = {}
 
 local TRACKED_TOTAL_FIELDS = {
@@ -519,7 +520,7 @@ local function SnapshotSession(verbose)
 				end
 
 				if source.isLocalPlayer and Recount.FightingWho == "" then
-					Recount.FightingWho = "Combat"
+					Recount.FightingWho = GENERIC_FIGHT_NAME
 				end
 			end
 		end
@@ -613,7 +614,7 @@ local function UpdateTick()
 
 		if found then
 			if Recount.FightingWho == "" then
-				Recount.FightingWho = "Combat"
+				Recount.FightingWho = GENERIC_FIGHT_NAME
 			end
 			Recount.NewData = true
 			if Recount.RefreshMainWindow then
@@ -663,7 +664,7 @@ local function OnCombatEnd()
 		ParseSessionFull()
 
 		if Recount.FightingWho == "" then
-			Recount.FightingWho = "Combat"
+			Recount.FightingWho = GENERIC_FIGHT_NAME
 		end
 
 		DP("Calling LeaveCombat, FightingWho=" .. Recount.FightingWho)

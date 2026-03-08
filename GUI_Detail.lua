@@ -1436,11 +1436,16 @@ function Recount:UpdateSummaryMode(name)
 	local activetime = (data2.ActiveTime or 0) + Epsilon
 	local damagetaken = data2.DamageTaken or 0
 	local dot_time = data2.DOT_Time or 0
+	local unsupportedText = "N/A"
 	theFrame.Damage.Total:SetValue(damage)
 	theFrame.Damage.Taken:SetValue(damagetaken)
 	theFrame.Damage.PerSec:SetValue((math.floor(10 * damage / (activetime) + 0.5) / 10))
 	theFrame.Damage.Time:SetValue(timedamage.."s ("..math.floor(100 * timedamage / (TotalTime + Epsilon) + 0.5).."%)")
-	theFrame.Damage.Misc:SetValue(math.floor(10 * dot_time / (activetime + Epsilon) + 0.5) / 10)
+	if Recount.UseDamageMeter then
+		theFrame.Damage.Misc:SetValue(unsupportedText)
+	else
+		theFrame.Damage.Misc:SetValue(math.floor(10 * dot_time / (activetime + Epsilon) + 0.5) / 10)
+	end
 
 	--Set Pet Data
 	if data.Pet and #data.Pet > 0 then
@@ -1480,8 +1485,12 @@ function Recount:UpdateSummaryMode(name)
 		theFrame.Pet.Taken:SetValue(petdamagetaken)
 		theFrame.Pet.PerSec:SetValue((math.floor(10 * petdamage / petactivetime + 0.5) / 10))
 		theFrame.Pet.Time:SetValue(pettimedamage)
-		Num, Focus = me:CalculateFocus(pettimedamaging)
-		theFrame.Pet.Focus:SetValue(Num.." ("..Focus.."%)")
+		if Recount.UseDamageMeter then
+			theFrame.Pet.Focus:SetValue(unsupportedText)
+		else
+			Num, Focus = me:CalculateFocus(pettimedamaging)
+			theFrame.Pet.Focus:SetValue(Num.." ("..Focus.."%)")
+		end
 
 		if #data.Pet > 1 then
 			theFrame.Pet.Page:SetText(L["Click for next Pet"])
@@ -1506,21 +1515,35 @@ function Recount:UpdateSummaryMode(name)
 	local hot_time = data2.HOT_Time or 0
 
 	theFrame.Healing.Total:SetValue((healing + absorbs).." ("..(math.floor(10 * (healing + absorbs) / (activetime) + 0.5) / 10)..")")
-	theFrame.Healing.Taken:SetValue(healingtaken)
-	theFrame.Healing.Overhealing:SetValue(overhealing.." ("..(math.floor(10 * overhealing / (activetime) + 0.5) / 10)..")".." ("..(math.floor(1000 * overhealing / (overhealing + healing + Epsilon) + 0.5) / 10).."%)")
 	theFrame.Healing.Time:SetValue(timeheal.."s ("..math.floor(100 * timeheal / (TotalTime + Epsilon) + 0.5).."%)")
-	theFrame.Healing.Misc:SetValue(math.floor(10 * hot_time / (activetime + Epsilon) + 0.5) / 10)
+	if Recount.UseDamageMeter then
+		theFrame.Healing.Taken:SetValue(unsupportedText)
+		theFrame.Healing.Overhealing:SetValue(unsupportedText)
+		theFrame.Healing.Misc:SetValue(unsupportedText)
+	else
+		theFrame.Healing.Taken:SetValue(healingtaken)
+		theFrame.Healing.Overhealing:SetValue(overhealing.." ("..(math.floor(10 * overhealing / (activetime) + 0.5) / 10)..")".." ("..(math.floor(1000 * overhealing / (overhealing + healing + Epsilon) + 0.5) / 10).."%)")
+		theFrame.Healing.Misc:SetValue(math.floor(10 * hot_time / (activetime + Epsilon) + 0.5) / 10)
+	end
 
 
 	local timedamaging = data2.TimeDamaging
 
-	Num, Focus = me:CalculateFocus(timedamaging)
-	theFrame.Damage.Focus:SetValue(Num.." ("..Focus.."%)")
+	if Recount.UseDamageMeter then
+		theFrame.Damage.Focus:SetValue(unsupportedText)
+	else
+		Num, Focus = me:CalculateFocus(timedamaging)
+		theFrame.Damage.Focus:SetValue(Num.." ("..Focus.."%)")
+	end
 
 	local timehealing = data2.TimeHealing
 
-	Num, Focus = me:CalculateFocus(timehealing)
-	theFrame.Healing.Focus:SetValue(Num.." ("..Focus.."%)")
+	if Recount.UseDamageMeter then
+		theFrame.Healing.Focus:SetValue(unsupportedText)
+	else
+		Num, Focus = me:CalculateFocus(timehealing)
+		theFrame.Healing.Focus:SetValue(Num.." ("..Focus.."%)")
+	end
 
 
 	theFrame.Name = name
