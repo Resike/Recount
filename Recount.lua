@@ -1601,6 +1601,9 @@ function Recount:PutInCombat()
 end
 
 function Recount:CheckCombat(Time)
+	if Recount.UseDamageMeter then
+		return -- Combat end is handled by Tracker_DamageMeter.lua via PLAYER_REGEN_ENABLED
+	end
 	if Recount:CheckPartyCombatWithPets() then
 		if Recount.db.profile.EnableSync then
 			Recount:CheckVisible()
@@ -1826,8 +1829,14 @@ function Recount:OnEnable()
 	Recount:ScheduleTimer("InitPartyBasedDeletion", 2) -- Elsia: Wait 2 seconds before enabling auto-delete to prevent startup popups.
 	--end -- Elsia: This is obsolete due to deletion code also handling visibility and solo collection checks.
 	-- Parser Events
-	Recount.events:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-	Recount.events:RegisterEvent("INSTANCE_ENCOUNTER_ENGAGE_UNIT")
+	if Recount.UseDamageMeter then
+		-- WoW 12.0+: Use C_DamageMeter API instead of COMBAT_LOG_EVENT_UNFILTERED
+		Recount:InitDamageMeterTracker()
+	else
+		-- Pre-12.0: Use traditional CLEU parsing
+		Recount.events:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+		Recount.events:RegisterEvent("INSTANCE_ENCOUNTER_ENGAGE_UNIT")
+	end
 	if RecountDeathTrack then
 		RecountDeathTrack:SetFight(Recount.db.profile.CurDataSet)
 	end

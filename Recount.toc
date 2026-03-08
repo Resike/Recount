@@ -38,6 +38,7 @@ TrackerModules\TrackerModule_Interrupts.lua
 TrackerModules\TrackerModule_Resurrection.lua
 TrackerModules\TrackerModule_CCBreakers.lua
 TrackerModules\TrackerModule_PowerGains.lua
+Tracker_DamageMeter.lua
 Tracker.lua
 roster.lua
 LazySync.lua
