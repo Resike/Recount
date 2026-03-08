@@ -1374,7 +1374,7 @@ function Recount:OpenFightDropDown(myframe)
 
 	local currentorder = 1
 
-	for k, v in pairs(Recount.db2.FoughtWho) do
+	for k, v in ipairs(Recount.db2.FoughtWho) do
 		fightopts.args["fight"..currentorder] = {
 			order = 30 + (currentorder - 1) * 10,
 			name = L["Fight"].." "..k.." - "..v,
@@ -1507,7 +1507,7 @@ function me:CreateFightDropdown(level)
 		end
 		UIDropDownMenu_AddButton(info, level)
 
-		for k, v in pairs(Recount.db2.FoughtWho) do
+		for k, v in ipairs(Recount.db2.FoughtWho) do
 			info.checked = nil
 			info.text = L["Fight"].." "..k.." - "..v
 			if Recount.db.profile.CurDataSet == "Fight"..k then
