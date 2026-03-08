@@ -480,21 +480,30 @@ end
 
 function me:FixRow(i)
 	local row = Recount.MainWindow.Rows[i]
-	local MaxNameWidth = row:GetWidth() - row.RightText:GetStringWidth() - 4
+	local MaxNameWidth = row:GetWidth() - 4
+	local ok, rightTextWidth = pcall(row.RightText.GetStringWidth, row.RightText)
+	if ok and type(rightTextWidth) == "number" and not (issecretvalue and issecretvalue(rightTextWidth)) then
+		MaxNameWidth = MaxNameWidth - rightTextWidth
+	end
 
 	if MaxNameWidth < 16 then
 		MaxNameWidth = 16
 	end
 
-	local LText = row.LeftText:GetText()
+	local okText, LText = pcall(row.LeftText.GetText, row.LeftText)
+	if not okText or not LText or (issecretvalue and issecretvalue(LText)) then
+		return
+	end
 
 	if not Recount.db.profile.MainWindow.BarText.ServerName then
 		LText = string.gsub(LText, "%-[^ >]+", "")
 	end
 	row.LeftText:SetText(LText)
-	while row.LeftText:GetStringWidth() > MaxNameWidth and #LText >= 2 do
+	local okWidth, leftTextWidth = pcall(row.LeftText.GetStringWidth, row.LeftText)
+	while okWidth and type(leftTextWidth) == "number" and not (issecretvalue and issecretvalue(leftTextWidth)) and leftTextWidth > MaxNameWidth and #LText >= 2 do
 		LText = string.sub(LText, 1, #LText - 1)
 		row.LeftText:SetText(LText.."...")
+		okWidth, leftTextWidth = pcall(row.LeftText.GetStringWidth, row.LeftText)
 	end
 end
 
@@ -1260,6 +1269,12 @@ function Recount:RefreshMainWindow(datarefresh)
 			elseif MainWindow_BarText_Percent then
 				righttext = string_format("%s (%.1f%%)", righttext, percent)
 			end
+			if type(Recount.GetMainWindowBarTextOverride) == "function" then
+				local overrideText = Recount:GetMainWindowBarTextOverride(v[4], Recount.db.profile.MainWindowMode)
+				if overrideText then
+					righttext = overrideText
+				end
+			end
 
 			percent = 100
 			if MaxValue ~= 0 then
@@ -1268,6 +1283,12 @@ function Recount:RefreshMainWindow(datarefresh)
 			me:SetBar(i, lefttext, righttext, percent, "Class", v[3], v[1], me.MainWindowSelectPlayer, v[4])
 			me:FixRow(i)
 			rows[i].name = v[1]
+			if type(Recount.GetMainWindowBarLabelOverride) == "function" then
+				local overrideLabel = Recount:GetMainWindowBarLabelOverride(v[4], Recount.db.profile.MainWindowMode, i + offset)
+				if overrideLabel then
+					rows[i].LeftText:SetText(overrideLabel)
+				end
+			end
 		else
 			rows[i]:Hide()
 		end

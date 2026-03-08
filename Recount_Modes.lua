@@ -273,7 +273,15 @@ function DataModes:DPSReturner(data, num)
 		return 0
 	end
 
-	local _, dps = Recount:MergedPetDamageDPS(data, Recount.db.profile.CurDataSet)
+	local fight = data.Fights[Recount.db.profile.CurDataSet]
+	local dps
+
+	if Recount.UseDamageMeter and Recount.InCombat and fight.DamagePerSecond and fight.DamagePerSecond > 0 then
+		dps = fight.DamagePerSecond
+	else
+		local _
+		_, dps = Recount:MergedPetDamageDPS(data, Recount.db.profile.CurDataSet)
+	end
 
 	if num == 1 then
 		return dps

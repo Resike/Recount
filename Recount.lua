@@ -908,11 +908,15 @@ end
 function Recount:InitFightData(data)
 	-- Init Data tracked
 	data.Damage = 0
+	data.DamagePerSecond = 0
 	data.FDamage = 0
 	data.DamageTaken = 0
+	data.DamageTakenPerSecond = 0
 	data.Healing = 0
+	data.HealingPerSecond = 0
 	data.HealingTaken = 0
 	data.Overhealing = 0
+	data.AbsorbPerSecond = 0
 	data.DeathCount = 0
 	data.DOT_Time = 0
 	data.HOT_Time = 0

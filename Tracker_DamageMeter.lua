@@ -9,7 +9,10 @@ if not C_DamageMeter then
 	return
 end
 
-local revision = tonumber(string.sub("$Revision: 1607 $", 12, -3))
+local AceLocale = LibStub("AceLocale-3.0")
+local L = AceLocale:GetLocale("Recount")
+
+local revision = tonumber(string.sub("$Revision: 1609 $", 12, -3))
 if Recount.Version < revision then
 	Recount.Version = revision
 end
@@ -22,12 +25,35 @@ local UnitClass = UnitClass
 local UnitLevel = UnitLevel
 local date = date
 local issecretvalue = issecretvalue
+local string_format = string.format
+local string_find = string.find
 
 -- Mark that we're using the new parser
 Recount.UseDamageMeter = true
+local DEBUG = false
+
+local function SafeDebugText(value)
+	if value == nil then
+		return "nil"
+	end
+	if issecretvalue and issecretvalue(value) then
+		return "<secret>"
+	end
+	local ok, text = pcall(tostring, value)
+	if ok then
+		return text
+	end
+	return "<unprintable>"
+end
 
 local function DP(msg)
-	print("|cFF00FF00[Recount DM]|r " .. tostring(msg))
+	if DEBUG then
+		print("|cFF00FF00[Recount DM]|r " .. SafeDebugText(msg))
+	end
+end
+
+local function DE(msg)
+	print("|cFF00FF00[Recount DM]|r " .. SafeDebugText(msg))
 end
 
 -- DamageMeterType enum values
@@ -51,6 +77,55 @@ local dbCombatants
 -- Track state
 local combatSessionID = nil -- The actual combat session ID (non-zero)
 local updateTicker = nil
+local IsSecret
+local SafeCombatCall
+local PROXY_PREFIX = "__RECOUNT_DM__"
+
+-- Secret value display cache, keyed by mode then combatant name.
+-- Raw secret values are only used for UI text while synthetic numeric values drive sorting.
+local secretDisplayValues = {}
+
+local function ClearSecretDisplayValues()
+	for _, modeData in pairs(secretDisplayValues) do
+		wipe(modeData)
+	end
+end
+
+local function StoreSecretValue(modeKey, combatantName, rawValue, rawPerSec, rawLabel)
+	if not modeKey or not combatantName then return end
+	if not IsSecret(rawValue) and not IsSecret(rawPerSec) then return end
+
+	local modeData = secretDisplayValues[modeKey]
+	if not modeData then
+		modeData = {}
+		secretDisplayValues[modeKey] = modeData
+	end
+
+	modeData[combatantName] = {
+		value = rawValue,
+		perSec = rawPerSec,
+		label = rawLabel,
+	}
+end
+
+local function GetSecretValue(modeKey, combatantName)
+	local modeData = secretDisplayValues[modeKey]
+	return modeData and modeData[combatantName] or nil
+end
+
+local function IsProxyCombatantName(name)
+	return type(name) == "string" and string_find(name, "^" .. PROXY_PREFIX) ~= nil
+end
+
+local function ClearProxyCombatants()
+	if not dbCombatants then return end
+
+	for name in pairs(dbCombatants) do
+		if IsProxyCombatantName(name) then
+			dbCombatants[name] = nil
+		end
+	end
+end
 
 -- Safe value access for secret values
 local function SafeNumber(val)
@@ -78,7 +153,7 @@ local function SafeString(val)
 	return tostring(val)
 end
 
-local function IsSecret(val)
+IsSecret = function(val)
 	return val ~= nil and issecretvalue and issecretvalue(val)
 end
 
@@ -140,7 +215,7 @@ local function ResolveName(source, orderIndex)
 		return rosterNames[orderIndex]
 	end
 
-	return nil
+	return PROXY_PREFIX .. tostring(orderIndex or 0)
 end
 
 -- Find or create a combatant from C_DamageMeter source data
@@ -311,6 +386,8 @@ local function SnapshotSession(verbose)
 	local sessionDuration = 0
 	local foundAny = false
 
+	ClearSecretDisplayValues()
+
 	local session = GetSession(DM_DamageDone)
 	if not session or not session.combatSources then
 		if verbose then DP("  No DamageDone session found") end
@@ -321,6 +398,9 @@ local function SnapshotSession(verbose)
 
 	if session.durationSeconds then
 		sessionDuration = GetDisplayNumber(session.durationSeconds, 1)
+	end
+	if sessionDuration <= 0 and Recount.InCombatT2 then
+		sessionDuration = math.max(0.1, GetTime() - Recount.InCombatT2)
 	end
 
 	local hasSecrets = false
@@ -336,10 +416,23 @@ local function SnapshotSession(verbose)
 		local who = GetOrCreateCombatant(source, i)
 		if who then
 			local amount = GetDisplayNumber(source.totalAmount, i)
-			if amount > 0 then
+			local dps = GetDisplayNumber(source.amountPerSecond, i)
+			if amount > 0 or dps > 0 then
 				who.Fights.CurrentFightData.Damage = amount
+				who.Fights.CurrentFightData.DamagePerSecond = dps
+				who.Fights.OverallData.Damage = amount
+				who.Fights.OverallData.DamagePerSecond = dps
 				who.LastFightIn = Recount.db2.FightNum
 				foundAny = true
+
+				if who.Name then
+					StoreSecretValue("Damage", who.Name, source.totalAmount, source.amountPerSecond, source.name)
+					if verbose and (IsSecret(source.totalAmount) or IsSecret(source.amountPerSecond)) then
+						DP("  Stored damage secrets for: " .. who.Name)
+					end
+				elseif verbose and (IsSecret(source.totalAmount) or IsSecret(source.amountPerSecond)) then
+					DP("  who.Name is nil, cannot store damage secrets")
+				end
 
 				if source.isLocalPlayer and Recount.FightingWho == "" then
 					Recount.FightingWho = "Combat"
@@ -358,33 +451,45 @@ local function SnapshotSession(verbose)
 				who.Fights.CurrentFightData.ActiveTime = sessionDuration
 				who.Fights.CurrentFightData.TimeDamage = sessionDuration
 				who.Fights.CurrentFightData.TimeHeal = sessionDuration
+				who.Fights.OverallData.ActiveTime = sessionDuration
+				who.Fights.OverallData.TimeDamage = sessionDuration
+				who.Fights.OverallData.TimeHeal = sessionDuration
 			end
 		end
 	end
 
-	local function ProcessType(dmType, dataField)
+	local function ProcessType(dmType, dataField, rateField, secretKey)
 		local s = GetSession(dmType)
 		if s and s.combatSources then
 			for idx, source in ipairs(s.combatSources) do
 				local who = GetOrCreateCombatant(source, idx)
 				if who then
 					local amount = GetDisplayNumber(source.totalAmount, idx)
-					if amount > 0 then
+					local perSec = rateField and GetDisplayNumber(source.amountPerSecond, idx) or 0
+					if amount > 0 or perSec > 0 then
 						who.Fights.CurrentFightData[dataField] = amount
+						who.Fights.OverallData[dataField] = amount
+						if rateField then
+							who.Fights.CurrentFightData[rateField] = perSec
+							who.Fights.OverallData[rateField] = perSec
+						end
 						who.LastFightIn = Recount.db2.FightNum
 						foundAny = true
+						if who.Name and secretKey then
+							StoreSecretValue(secretKey, who.Name, source.totalAmount, source.amountPerSecond, source.name)
+						end
 					end
 				end
 			end
 		end
 	end
 
-	ProcessType(DM_HealingDone, "Healing")
-	ProcessType(DM_Absorbs, "Absorbs")
-	ProcessType(DM_DamageTaken, "DamageTaken")
-	ProcessType(DM_Interrupts, "Interrupts")
-	ProcessType(DM_Dispels, "Dispels")
-	ProcessType(DM_Deaths, "DeathCount")
+	ProcessType(DM_HealingDone, "Healing", "HealingPerSecond", "Healing")
+	ProcessType(DM_Absorbs, "Absorbs", "AbsorbPerSecond", "Absorbs")
+	ProcessType(DM_DamageTaken, "DamageTaken", "DamageTakenPerSecond", "DamageTaken")
+	ProcessType(DM_Interrupts, "Interrupts", nil, "Interrupts")
+	ProcessType(DM_Dispels, "Dispels", nil, "Dispels")
+	ProcessType(DM_Deaths, "DeathCount", nil, "Deaths")
 
 	Recount.NewData = true
 	return foundAny
@@ -402,9 +507,13 @@ local function ParseSessionFull()
 				who.Fights.OverallData = who.Fights.OverallData or {}
 				local cur = who.Fights.CurrentFightData
 				local ovr = who.Fights.OverallData
-				for _, field in ipairs({"Damage", "Healing", "Absorbs", "DamageTaken", "Interrupts", "Dispels", "DeathCount", "ActiveTime", "TimeDamage", "TimeHeal"}) do
+				for _, field in ipairs({"Damage", "DamagePerSecond", "Healing", "HealingPerSecond", "Absorbs", "AbsorbPerSecond", "DamageTaken", "DamageTakenPerSecond", "Interrupts", "Dispels", "DeathCount", "ActiveTime", "TimeDamage", "TimeHeal"}) do
 					if cur[field] and cur[field] > 0 then
-						ovr[field] = (ovr[field] or 0) + cur[field]
+						if field == "DamagePerSecond" or field == "HealingPerSecond" or field == "AbsorbPerSecond" or field == "DamageTakenPerSecond" then
+							ovr[field] = cur[field]
+						else
+							ovr[field] = (ovr[field] or 0) + cur[field]
+						end
 					end
 				end
 			end
@@ -426,29 +535,31 @@ end
 -- Real-time update during combat
 local tickCount = 0
 local function UpdateTick()
-	if not Recount.InCombat then
-		if updateTicker then
-			updateTicker:Cancel()
-			updateTicker = nil
+	SafeCombatCall("UpdateTick", function()
+		if not Recount.InCombat then
+			if updateTicker then
+				updateTicker:Cancel()
+				updateTicker = nil
+			end
+			return
 		end
-		return
-	end
 
-	tickCount = tickCount + 1
-	local found = SnapshotSession(tickCount <= 2) -- verbose on first two ticks
-	if tickCount <= 3 then
-		DP("UpdateTick #" .. tickCount .. ": found=" .. tostring(found) .. " sessionID=" .. tostring(combatSessionID))
-	end
+		tickCount = tickCount + 1
+		local found = SnapshotSession(tickCount <= 2) -- verbose on first two ticks
+		if tickCount <= 3 then
+			DP("UpdateTick #" .. tickCount .. ": found=" .. tostring(found) .. " sessionID=" .. tostring(combatSessionID))
+		end
 
-	if found then
-		if Recount.FightingWho == "" then
-			Recount.FightingWho = "Combat"
+		if found then
+			if Recount.FightingWho == "" then
+				Recount.FightingWho = "Combat"
+			end
+			Recount.NewData = true
+			if Recount.RefreshMainWindow then
+				Recount:RefreshMainWindow()
+			end
 		end
-		Recount.NewData = true
-		if Recount.RefreshMainWindow then
-			Recount:RefreshMainWindow()
-		end
-	end
+	end)
 end
 
 local function StartUpdateTicker()
@@ -475,10 +586,14 @@ local function OnCombatEnd()
 	C_Timer.After(0.5, function()
 		DP("End timer fired: InCombat=" .. tostring(Recount.InCombat))
 
+		-- Clear secret display values - real values are now available
+		ClearSecretDisplayValues()
+		ClearProxyCombatants()
+
 		-- Reset CurrentFightData before final parse
 		for _, who in pairs(dbCombatants) do
 			if who.LastFightIn == Recount.db2.FightNum and who.Fights and who.Fights.CurrentFightData then
-				for _, f in ipairs({"Damage", "Healing", "Absorbs", "DamageTaken", "Interrupts", "Dispels", "DeathCount", "ActiveTime", "TimeDamage", "TimeHeal"}) do
+				for _, f in ipairs({"Damage", "DamagePerSecond", "Healing", "HealingPerSecond", "Absorbs", "AbsorbPerSecond", "DamageTaken", "DamageTakenPerSecond", "Interrupts", "Dispels", "DeathCount", "ActiveTime", "TimeDamage", "TimeHeal"}) do
 					who.Fights.CurrentFightData[f] = 0
 				end
 			end
@@ -507,6 +622,8 @@ local function OnEvent(self, event, ...)
 		end
 		DP("PLAYER_REGEN_DISABLED - combat start")
 		combatSessionID = nil
+		ClearSecretDisplayValues()
+		ClearProxyCombatants()
 		Recount:PutInCombat()
 		StartUpdateTicker()
 
@@ -548,6 +665,8 @@ function Recount:InitDamageMeterTracker()
 	dmFrame:RegisterEvent("DAMAGE_METER_CURRENT_SESSION_UPDATED")
 	dmFrame:RegisterEvent("DAMAGE_METER_RESET")
 	dmFrame:RegisterEvent("INSTANCE_ENCOUNTER_ENGAGE_UNIT")
+
+	DP("Init complete")
 end
 
 local originalResetDataUnsafe = Recount.ResetDataUnsafe
@@ -560,5 +679,139 @@ function Recount:ResetDataUnsafe()
 	Recount._resettingData = false
 	dbCombatants = Recount.db2.combatants
 	combatSessionID = nil
+	ClearSecretDisplayValues()
+	ClearProxyCombatants()
 	DP("ResetDataUnsafe complete")
+end
+
+local function FormatRealtimeValue(value)
+	if value == nil then
+		return nil
+	end
+
+	if IsSecret(value) then
+		local ok, text = pcall(string_format, "%.0f", value)
+		if ok and text then
+			return text
+		end
+
+		ok, text = pcall(string_format, "%s", value)
+		if ok and text then
+			return text
+		end
+
+		return nil
+	end
+
+	return Recount:FormatLongNums(value)
+end
+
+local function GetMainWindowSecretEntry(modeData, combatantName)
+	if not modeData or not combatantName then
+		return nil, nil
+	end
+
+	local modeName = modeData[1]
+	local modeCategory = modeData[7]
+
+	if modeName == L["DPS"] then
+		return GetSecretValue("Damage", combatantName), true
+	end
+
+	if modeCategory == "Damage" then
+		return GetSecretValue("Damage", combatantName), false
+	end
+
+	if modeCategory == "Healing" then
+		return GetSecretValue("Healing", combatantName), false
+	end
+
+	if modeCategory == "DamageTaken" then
+		return GetSecretValue("DamageTaken", combatantName), false
+	end
+
+	if modeName == L["Absorbs"] then
+		return GetSecretValue("Absorbs", combatantName), false
+	end
+
+	if modeName == L["Deaths"] then
+		return GetSecretValue("Deaths", combatantName), false
+	end
+
+	return nil, nil
+end
+
+function Recount:GetMainWindowBarLabelOverride(combatant, modeIndex, rank)
+	if not self.UseDamageMeter or not self.InCombat then
+		return nil
+	end
+
+	local combatantName = type(combatant) == "table" and combatant.Name or combatant
+	if not combatantName then
+		return nil
+	end
+
+	local modeData = self.MainWindowData and self.MainWindowData[modeIndex]
+	local entry = select(1, GetMainWindowSecretEntry(modeData, combatantName))
+	local label = entry and entry.label
+	if not label then
+		return nil
+	end
+
+	if self.db.profile.MainWindow.BarText.RankNum and rank then
+		local ok, text = pcall(string_format, "%d. %s", rank, label)
+		if ok and text then
+			return text
+		end
+	end
+
+	return label
+end
+
+function Recount:GetMainWindowBarTextOverride(combatant, modeIndex)
+	if not self.UseDamageMeter or not self.InCombat then
+		return nil
+	end
+
+	local combatantName = type(combatant) == "table" and combatant.Name or combatant
+	if not combatantName then
+		return nil
+	end
+
+	local modeData = self.MainWindowData and self.MainWindowData[modeIndex]
+	local entry, useRate = GetMainWindowSecretEntry(modeData, combatantName)
+	if not entry then
+		return nil
+	end
+
+	local valueText = FormatRealtimeValue(useRate and entry.perSec or entry.value)
+	if not valueText then
+		return nil
+	end
+
+	if useRate then
+		return valueText
+	end
+
+	local barText = self.db and self.db.profile and self.db.profile.MainWindow and self.db.profile.MainWindow.BarText
+	if barText and barText.PerSec then
+		local perSecText = FormatRealtimeValue(entry.perSec)
+		if perSecText then
+			return string_format("%s (%s)", valueText, perSecText)
+		end
+	end
+
+	return valueText
+end
+
+SafeCombatCall = function(context, func)
+	local ok, err = xpcall(func, function(message)
+		return SafeDebugText(message)
+	end)
+
+	if not ok then
+		DE(context .. " error: " .. SafeDebugText(err))
+	end
+
+	return ok
 end
