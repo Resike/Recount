@@ -23,6 +23,8 @@ local GetTime = GetTime
 local UnitName = UnitName
 local UnitClass = UnitClass
 local UnitLevel = UnitLevel
+local UnitGroupRolesAssigned = UnitGroupRolesAssigned
+local IsInRaid = IsInRaid
 local date = date
 local issecretvalue = issecretvalue
 local string_format = string.format
@@ -96,6 +98,13 @@ local TRACKED_TOTAL_FIELDS = {
 	"TimeHeal",
 }
 
+local TRACKED_RATE_FIELDS = {
+	"DamagePerSecond",
+	"HealingPerSecond",
+	"AbsorbPerSecond",
+	"DamageTakenPerSecond",
+}
+
 -- Secret value display cache, keyed by mode then combatant name.
 -- Raw secret values are only used for UI text while synthetic numeric values drive sorting.
 local secretDisplayValues = {}
@@ -145,6 +154,40 @@ local function GetOverallBaseline(who, field)
 	return baseline[field] or 0
 end
 
+local function ResetSnapshotCombatant(who)
+	if not who or not who.Fights then
+		return
+	end
+
+	local currentFight = who.Fights.CurrentFightData
+	local overallFight = who.Fights.OverallData
+	if not currentFight or not overallFight then
+		return
+	end
+
+	for _, field in ipairs(TRACKED_TOTAL_FIELDS) do
+		currentFight[field] = 0
+		overallFight[field] = GetOverallBaseline(who, field)
+	end
+
+	for _, field in ipairs(TRACKED_RATE_FIELDS) do
+		currentFight[field] = 0
+		overallFight[field] = 0
+	end
+
+	who.LastFightIn = nil
+end
+
+local function ResetSnapshotData()
+	if not dbCombatants then
+		return
+	end
+
+	for _, who in pairs(dbCombatants) do
+		ResetSnapshotCombatant(who)
+	end
+end
+
 local function StoreSecretValue(modeKey, combatantName, rawValue, rawPerSec, rawLabel)
 	if not modeKey or not combatantName then return end
 	if not IsSecret(rawValue) and not IsSecret(rawPerSec) then return end
@@ -179,6 +222,43 @@ local function ClearProxyCombatants()
 			dbCombatants[name] = nil
 		end
 	end
+end
+
+local function MoveNamedState(map, oldName, newName)
+	if not map or not oldName or not newName or oldName == newName then
+		return
+	end
+
+	if map[oldName] and map[newName] == nil then
+		map[newName] = map[oldName]
+	end
+	map[oldName] = nil
+end
+
+local function RenameCombatant(oldName, newName)
+	if not dbCombatants or not oldName or not newName or oldName == newName then
+		return dbCombatants and dbCombatants[newName] or nil
+	end
+
+	local who = dbCombatants[oldName]
+	if not who then
+		return dbCombatants[newName]
+	end
+
+	if dbCombatants[newName] and dbCombatants[newName] ~= who then
+		return dbCombatants[newName]
+	end
+
+	dbCombatants[oldName] = nil
+	who.Name = newName
+	dbCombatants[newName] = who
+
+	for _, modeData in pairs(secretDisplayValues) do
+		MoveNamedState(modeData, oldName, newName)
+	end
+	MoveNamedState(overallBaseline, oldName, newName)
+
+	return who
 end
 
 -- Safe value access for secret values
@@ -231,7 +311,11 @@ local function RefreshRosterCache()
 	local playerName = UnitName("player")
 	if playerName then
 		local _, playerClass = UnitClass("player")
-		rosterCache[playerName] = { name = playerName, class = playerClass }
+		rosterCache[playerName] = {
+			name = playerName,
+			class = playerClass,
+			role = UnitGroupRolesAssigned and UnitGroupRolesAssigned("player") or nil,
+		}
 	end
 
 	-- Add group/raid members
@@ -242,9 +326,50 @@ local function RefreshRosterCache()
 		local uName = UnitName(unit)
 		if uName then
 			local _, uClass = UnitClass(unit)
-			rosterCache[uName] = { name = uName, class = uClass }
+			rosterCache[uName] = {
+				name = uName,
+				class = uClass,
+				role = UnitGroupRolesAssigned and UnitGroupRolesAssigned(unit) or nil,
+			}
 		end
 	end
+end
+
+local function ResolveUniqueRosterName(source)
+	RefreshRosterCache()
+
+	local desiredClass = GetEnClass(source.classFilename)
+	if desiredClass == "UNKNOWN" or desiredClass == "MOB" then
+		return nil
+	end
+
+	local desiredRole = SafeString(source.role)
+	local playerName = UnitName("player")
+	local classMatch
+	local classCount = 0
+	local roleMatch
+	local roleCount = 0
+
+	for name, rosterEntry in pairs(rosterCache) do
+		if name ~= playerName and rosterEntry.class == desiredClass then
+			classMatch = name
+			classCount = classCount + 1
+			if desiredRole and desiredRole ~= "" and rosterEntry.role == desiredRole then
+				roleMatch = name
+				roleCount = roleCount + 1
+			end
+		end
+	end
+
+	if desiredRole and desiredRole ~= "" and roleCount == 1 then
+		return roleMatch
+	end
+
+	if classCount == 1 then
+		return classMatch
+	end
+
+	return nil
 end
 
 -- Resolve a combatant name from source, handling secret values
@@ -256,6 +381,11 @@ local function ResolveName(source, orderIndex)
 	-- Name is secret - use known info to identify the player
 	if source.isLocalPlayer then
 		return UnitName("player")
+	end
+
+	local rosterName = ResolveUniqueRosterName(source)
+	if rosterName then
+		return rosterName
 	end
 
 	-- For other live group members, keep an opaque internal key and render the
@@ -278,6 +408,17 @@ local function GetOrCreateCombatant(source, orderIndex)
 
 	local guid = SafeString(source.sourceGUID)
 	local classFilename = GetEnClass(source.classFilename)
+
+	if guid then
+		for existingName, existingCombatant in pairs(dbCombatants) do
+			if existingCombatant and existingCombatant.GUID == guid then
+				if existingName ~= name and not IsProxyCombatantName(name) then
+					return RenameCombatant(existingName, name)
+				end
+				return existingCombatant
+			end
+		end
+	end
 
 	if dbCombatants[name] then
 		local who = dbCombatants[name]
@@ -456,6 +597,7 @@ local function SnapshotSession(verbose)
 	local foundAny = false
 
 	ClearSecretDisplayValues()
+	ResetSnapshotData()
 
 	local session = GetSession(DM_DamageDone)
 	if not session or not session.combatSources then
