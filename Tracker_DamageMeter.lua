@@ -216,7 +216,7 @@ local function StoreSecretValue(modeKey, combatantName, rawValue, rawPerSec, raw
 	}
 end
 
-local function StoreSecretBarValue(modeKey, combatantName, rawValue, rawPerSec)
+local function StoreSecretBarValue(modeKey, combatantName, rawValue, rawPerSec, rank)
 	if not modeKey or not combatantName then
 		return
 	end
@@ -230,6 +230,7 @@ local function StoreSecretBarValue(modeKey, combatantName, rawValue, rawPerSec)
 	modeData.entries[combatantName] = {
 		value = rawValue,
 		perSec = rawPerSec,
+		rank = rank,
 	}
 end
 
@@ -256,6 +257,38 @@ end
 local function GetSecretBarValue(modeKey, combatantName)
 	local modeData = secretBarValues[modeKey]
 	return modeData and modeData.entries and modeData.entries[combatantName] or nil
+end
+
+local function GetMainWindowModeKey(modeData)
+	local modeName = modeData and modeData[1]
+	local modeCategory = modeData and modeData[7]
+
+	if modeName == L["DPS"] then
+		return "Damage", true
+	end
+	if modeCategory == "Damage" then
+		return "Damage", false
+	end
+	if modeCategory == "Healing" then
+		return "Healing", false
+	end
+	if modeCategory == "DamageTaken" then
+		return "DamageTaken", false
+	end
+	if modeName == L["Absorbs"] then
+		return "Absorbs", false
+	end
+	if modeName == L["Interrupts"] then
+		return "Interrupts", false
+	end
+	if modeName == L["Dispels"] then
+		return "Dispels", false
+	end
+	if modeName == L["Deaths"] then
+		return "Deaths", false
+	end
+
+	return nil, false
 end
 
 local function IsProxyCombatantName(name)
@@ -709,7 +742,7 @@ local function SnapshotSession(verbose)
 
 					if who.Name then
 						StoreSecretValue("Damage", who.Name, source.totalAmount, source.amountPerSecond, source.name)
-						StoreSecretBarValue("Damage", who.Name, source.totalAmount, source.amountPerSecond)
+							StoreSecretBarValue("Damage", who.Name, source.totalAmount, source.amountPerSecond, i)
 						if verbose and (IsSecret(source.totalAmount) or IsSecret(source.amountPerSecond)) then
 							DP("  Stored damage secrets for: " .. who.Name)
 						end
@@ -758,7 +791,7 @@ local function SnapshotSession(verbose)
 							foundAny = true
 							if who.Name and secretKey then
 								StoreSecretValue(secretKey, who.Name, source.totalAmount, source.amountPerSecond, source.name)
-								StoreSecretBarValue(secretKey, who.Name, source.totalAmount, source.amountPerSecond)
+								StoreSecretBarValue(secretKey, who.Name, source.totalAmount, source.amountPerSecond, idx)
 							end
 						end
 					end
@@ -978,42 +1011,12 @@ local function GetMainWindowSecretEntry(modeData, combatantName)
 		return nil, nil
 	end
 
-	local modeName = modeData[1]
-	local modeCategory = modeData[7]
-
-	if modeName == L["DPS"] then
-		return GetSecretValue("Damage", combatantName), true
+	local modeKey, useRate = GetMainWindowModeKey(modeData)
+	if not modeKey then
+		return nil, nil
 	end
 
-	if modeCategory == "Damage" then
-		return GetSecretValue("Damage", combatantName), false
-	end
-
-	if modeCategory == "Healing" then
-		return GetSecretValue("Healing", combatantName), false
-	end
-
-	if modeCategory == "DamageTaken" then
-		return GetSecretValue("DamageTaken", combatantName), false
-	end
-
-	if modeName == L["Absorbs"] then
-		return GetSecretValue("Absorbs", combatantName), false
-	end
-
-	if modeName == L["Interrupts"] then
-		return GetSecretValue("Interrupts", combatantName), false
-	end
-
-	if modeName == L["Dispels"] then
-		return GetSecretValue("Dispels", combatantName), false
-	end
-
-	if modeName == L["Deaths"] then
-		return GetSecretValue("Deaths", combatantName), false
-	end
-
-	return nil, nil
+	return GetSecretValue(modeKey, combatantName), useRate
 end
 
 function Recount:GetMainWindowBarLabelOverride(combatant, modeIndex, rank)
@@ -1102,34 +1105,13 @@ function Recount:GetMainWindowBarValueOverride(combatant, modeIndex)
 	end
 
 	local modeData = self.MainWindowData and self.MainWindowData[modeIndex]
-	local modeName = modeData and modeData[1]
 	local modeCategory = modeData and modeData[7]
 
 	if modeCategory == "Healing" and self.db and self.db.profile and self.db.profile.MergeAbsorbs then
 		return nil
 	end
 
-	local modeKey
-	local useRate = false
-	if modeName == L["DPS"] then
-		modeKey = "Damage"
-		useRate = true
-	elseif modeCategory == "Damage" then
-		modeKey = "Damage"
-	elseif modeCategory == "Healing" then
-		modeKey = "Healing"
-	elseif modeCategory == "DamageTaken" then
-		modeKey = "DamageTaken"
-	elseif modeName == L["Absorbs"] then
-		modeKey = "Absorbs"
-	elseif modeName == L["Interrupts"] then
-		modeKey = "Interrupts"
-	elseif modeName == L["Dispels"] then
-		modeKey = "Dispels"
-	elseif modeName == L["Deaths"] then
-		modeKey = "Deaths"
-	end
-
+	local modeKey, useRate = GetMainWindowModeKey(modeData)
 	if not modeKey then
 		return nil
 	end
@@ -1147,6 +1129,31 @@ function Recount:GetMainWindowBarValueOverride(combatant, modeIndex)
 	end
 
 	return value, maxValue
+end
+
+function Recount:GetMainWindowSortRankOverride(combatant, modeIndex)
+	if not self.UseDamageMeter or not self.InCombat then
+		return nil
+	end
+
+	local combatantName = type(combatant) == "table" and combatant.Name or combatant
+	if not combatantName then
+		return nil
+	end
+
+	local modeData = self.MainWindowData and self.MainWindowData[modeIndex]
+	local modeCategory = modeData and modeData[7]
+	if modeCategory == "Healing" and self.db and self.db.profile and self.db.profile.MergeAbsorbs then
+		return nil
+	end
+
+	local modeKey = GetMainWindowModeKey(modeData)
+	if not modeKey then
+		return nil
+	end
+
+	local entry = GetSecretBarValue(modeKey, combatantName)
+	return entry and entry.rank or nil
 end
 
 SafeCombatCall = function(context, func)

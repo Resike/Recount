@@ -901,6 +901,19 @@ end
 
 --Actual Data Functions
 local function sortFunc(a, b)
+	if Recount and Recount.UseDamageMeter and Recount.InCombat and type(Recount.GetMainWindowSortRankOverride) == "function" and Recount.db and Recount.db.profile then
+		local modeIndex = Recount.db.profile.MainWindowMode
+		local rankA = Recount:GetMainWindowSortRankOverride(a[4], modeIndex)
+		local rankB = Recount:GetMainWindowSortRankOverride(b[4], modeIndex)
+		if rankA and rankB and rankA ~= rankB then
+			return rankA < rankB
+		elseif rankA and not rankB then
+			return true
+		elseif rankB and not rankA then
+			return false
+		end
+	end
+
 	if a[2] > b[2] then
 		return true
 	elseif a[2] == b[2] then
