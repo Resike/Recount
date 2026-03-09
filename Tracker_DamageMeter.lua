@@ -1131,6 +1131,30 @@ function Recount:GetMainWindowBarValueOverride(combatant, modeIndex)
 	return value, maxValue
 end
 
+function Recount:HasMainWindowLiveEntry(combatant, modeIndex)
+	if not self.UseDamageMeter or not self.InCombat then
+		return false
+	end
+
+	local combatantName = type(combatant) == "table" and combatant.Name or combatant
+	if not combatantName then
+		return false
+	end
+
+	local modeData = self.MainWindowData and self.MainWindowData[modeIndex]
+	local modeCategory = modeData and modeData[7]
+	if modeCategory == "Healing" and self.db and self.db.profile and self.db.profile.MergeAbsorbs then
+		return GetSecretBarValue("Healing", combatantName) ~= nil or GetSecretBarValue("Absorbs", combatantName) ~= nil
+	end
+
+	local modeKey = GetMainWindowModeKey(modeData)
+	if not modeKey then
+		return false
+	end
+
+	return GetSecretBarValue(modeKey, combatantName) ~= nil
+end
+
 function Recount:GetMainWindowSortRankOverride(combatant, modeIndex)
 	if not self.UseDamageMeter or not self.InCombat then
 		return nil

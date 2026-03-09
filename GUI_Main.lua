@@ -1120,6 +1120,8 @@ function Recount:RefreshMainWindow(datarefresh)
 	local Total = 0
 	local TotalPerSec = 0
 	local Value, PerSec
+	local liveCombatOnly = Recount.UseDamageMeter and Recount.InCombat and type(Recount.HasMainWindowLiveEntry) == "function"
+	local modeIndex = Recount.db and Recount.db.profile and Recount.db.profile.MainWindowMode
 
 	if type(Recount.MainWindowData[Recount.db.profile.MainWindowMode][6]) == "function" then
 		MainWindow.Title:SetText(Recount.MainWindowData[Recount.db.profile.MainWindowMode][6]())
@@ -1153,37 +1155,39 @@ function Recount:RefreshMainWindow(datarefresh)
 			if v and v.type and FiltersShow[v.type] and not (v.type == "Pet" and Recount.db.profile.MergePets and v.Owner and Combatants[v.Owner] and not FiltersShow[Combatants[v.Owner].type]) then -- Elsia: Added owner inheritance filtering for pets
 				if v.Fights and v.Fights[Recount.db.profile.CurDataSet] then
 					Value, PerSec = MainWindow:GetData(v, 1)
+				else
+					Value = 0
+				end
 
-					if Value > 0 then
-						if v.type ~= "Pet" or not Recount.db.profile.MergePets then -- Elsia: Only add to total if not merging pets.
-							Total = Total + Value
-							if type(PerSec) == "number" then
-								TotalPerSec = TotalPerSec + PerSec
-							end
+				if Value > 0 then
+					if v.type ~= "Pet" or not Recount.db.profile.MergePets then -- Elsia: Only add to total if not merging pets.
+						Total = Total + Value
+						if type(PerSec) == "number" then
+							TotalPerSec = TotalPerSec + PerSec
 						end
+					end
 
-						if type(lookup[k]) == "table" then
-							if Value ~= lookup[k][2] then
-								lookup[k][1] = k
-								lookup[k][2] = Value
-								lookup[k][3] = v.enClass -- ClassColors[v.enClass]
-								lookup[k][4] = v
-								lookup[k][5] = PerSec
-								noUpdates = false
-							end
-						else
-							lookup[k] = {k, Value, v.enClass, v, PerSec} -- Recount.Colors:GetColor("Class",v.enClass)
-							tinsert(dispTable, lookup[k])
+					if type(lookup[k]) == "table" then
+						if Value ~= lookup[k][2] then
+							lookup[k][1] = k
+							lookup[k][2] = Value
+							lookup[k][3] = v.enClass -- ClassColors[v.enClass]
+							lookup[k][4] = v
+							lookup[k][5] = PerSec
 							noUpdates = false
 						end
-					elseif type(lookup[k]) == "table" then
-						lookup[k] = nil
+					else
+						lookup[k] = {k, Value, v.enClass, v, PerSec} -- Recount.Colors:GetColor("Class",v.enClass)
+						tinsert(dispTable, lookup[k])
+						noUpdates = false
+					end
+				elseif type(lookup[k]) == "table" then
+					lookup[k] = nil
 
-						for k2, v2 in ipairs(dispTable) do
-							if v2[1] == k then
-								tremove(dispTable, k2)
-								break
-							end
+					for k2, v2 in ipairs(dispTable) do
+						if v2[1] == k then
+							tremove(dispTable, k2)
+							break
 						end
 					end
 				end
@@ -1198,12 +1202,27 @@ function Recount:RefreshMainWindow(datarefresh)
 		MaxValue = dispTable[1][2]
 	end
 
+	local visibleDispTable = dispTable
+	if liveCombatOnly then
+		visibleDispTable = {}
+		for _, entry in ipairs(dispTable) do
+			if Recount:HasMainWindowLiveEntry(entry[4], modeIndex) then
+				tinsert(visibleDispTable, entry)
+			end
+		end
+		if #visibleDispTable > 0 then
+			MaxValue = visibleDispTable[1][2]
+		else
+			MaxValue = 0
+		end
+	end
+
 	local RowWidth = MainWindow:GetWidth() - 4
-	if #(dispTable) > MainWindow.CurRows and MainWindow_Settings.ShowScrollbar == true then
+	if #(visibleDispTable) > MainWindow.CurRows and MainWindow_Settings.ShowScrollbar == true then
 		RowWidth = MainWindow:GetWidth() - 23
 	end
 
-	FauxScrollFrame_Update(MainWindow.ScrollBar, #(dispTable), Recount.MainWindow.CurRows, 20)
+	FauxScrollFrame_Update(MainWindow.ScrollBar, #(visibleDispTable), Recount.MainWindow.CurRows, 20)
 	local offset = FauxScrollFrame_GetOffset(MainWindow.ScrollBar)
 
 	if type(MainWindow.SpecialTotal) == "function" then
@@ -1216,7 +1235,7 @@ function Recount:RefreshMainWindow(datarefresh)
 	local MainWindow_BarText_PerSec = MainWindow_Settings.BarText.PerSec
 	local MainWindow_BarText_Percent = MainWindow_Settings.BarText.Percent
 
-	if not MainWindow_Settings.HideTotalBar and MainWindow.CurRows > 0 and Total > 0 then
+	if not liveCombatOnly and not MainWindow_Settings.HideTotalBar and MainWindow.CurRows > 0 and Total > 0 then
 		if TotalPerSec > 0 then
 			PerSec = Recount:FormatLongNums(TotalPerSec)
 			--PerSec = string_format("%.1f", TotalPerSec)
@@ -1252,8 +1271,8 @@ function Recount:RefreshMainWindow(datarefresh)
 		end
 	end
 
-	for i = 1, MainWindow.CurRows do
-		local v = dispTable[i + offset]
+		for i = 1, MainWindow.CurRows do
+			local v = visibleDispTable[i + offset]
 
 		if v then
 			local percent = 100
