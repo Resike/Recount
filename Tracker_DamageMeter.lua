@@ -108,10 +108,21 @@ local TRACKED_RATE_FIELDS = {
 -- Secret value display cache, keyed by mode then combatant name.
 -- Raw secret values are only used for UI text while synthetic numeric values drive sorting.
 local secretDisplayValues = {}
+local secretBarValues = {}
 
 local function ClearSecretDisplayValues()
 	for _, modeData in pairs(secretDisplayValues) do
 		wipe(modeData)
+	end
+end
+
+local function ClearSecretBarValues()
+	for _, modeData in pairs(secretBarValues) do
+		if modeData.entries then
+			wipe(modeData.entries)
+		end
+		modeData.maxValue = nil
+		modeData.maxPerSec = nil
 	end
 end
 
@@ -205,9 +216,46 @@ local function StoreSecretValue(modeKey, combatantName, rawValue, rawPerSec, raw
 	}
 end
 
+local function StoreSecretBarValue(modeKey, combatantName, rawValue, rawPerSec)
+	if not modeKey or not combatantName then
+		return
+	end
+
+	local modeData = secretBarValues[modeKey]
+	if not modeData then
+		modeData = { entries = {} }
+		secretBarValues[modeKey] = modeData
+	end
+
+	modeData.entries[combatantName] = {
+		value = rawValue,
+		perSec = rawPerSec,
+	}
+end
+
+local function SetSecretBarScale(modeKey, rawMaxValue, rawMaxPerSec)
+	if not modeKey then
+		return
+	end
+
+	local modeData = secretBarValues[modeKey]
+	if not modeData then
+		modeData = { entries = {} }
+		secretBarValues[modeKey] = modeData
+	end
+
+	modeData.maxValue = rawMaxValue
+	modeData.maxPerSec = rawMaxPerSec
+end
+
 local function GetSecretValue(modeKey, combatantName)
 	local modeData = secretDisplayValues[modeKey]
 	return modeData and modeData[combatantName] or nil
+end
+
+local function GetSecretBarValue(modeKey, combatantName)
+	local modeData = secretBarValues[modeKey]
+	return modeData and modeData.entries and modeData.entries[combatantName] or nil
 end
 
 local function IsProxyCombatantName(name)
@@ -255,6 +303,11 @@ local function RenameCombatant(oldName, newName)
 
 	for _, modeData in pairs(secretDisplayValues) do
 		MoveNamedState(modeData, oldName, newName)
+	end
+	for _, modeData in pairs(secretBarValues) do
+		if modeData and modeData.entries then
+			MoveNamedState(modeData.entries, oldName, newName)
+		end
 	end
 	MoveNamedState(overallBaseline, oldName, newName)
 
@@ -597,6 +650,7 @@ local function SnapshotSession(verbose)
 	local foundAny = false
 
 	ClearSecretDisplayValues()
+	ClearSecretBarValues()
 	ResetSnapshotData()
 
 	local session = GetSession(DM_DamageDone)
@@ -606,6 +660,7 @@ local function SnapshotSession(verbose)
 	end
 
 	if verbose then DP("  DamageDone: " .. #session.combatSources .. " sources") end
+	SetSecretBarScale("Damage", session.maxAmount, session.combatSources[1] and session.combatSources[1].amountPerSecond or nil)
 
 	if session.durationSeconds then
 		sessionDuration = GetDisplayNumber(session.durationSeconds, 1)
@@ -652,11 +707,12 @@ local function SnapshotSession(verbose)
 				who.LastFightIn = Recount.db2.FightNum
 				foundAny = true
 
-				if who.Name then
-					StoreSecretValue("Damage", who.Name, source.totalAmount, source.amountPerSecond, source.name)
-					if verbose and (IsSecret(source.totalAmount) or IsSecret(source.amountPerSecond)) then
-						DP("  Stored damage secrets for: " .. who.Name)
-					end
+					if who.Name then
+						StoreSecretValue("Damage", who.Name, source.totalAmount, source.amountPerSecond, source.name)
+						StoreSecretBarValue("Damage", who.Name, source.totalAmount, source.amountPerSecond)
+						if verbose and (IsSecret(source.totalAmount) or IsSecret(source.amountPerSecond)) then
+							DP("  Stored damage secrets for: " .. who.Name)
+						end
 				elseif verbose and (IsSecret(source.totalAmount) or IsSecret(source.amountPerSecond)) then
 					DP("  who.Name is nil, cannot store damage secrets")
 				end
@@ -688,6 +744,9 @@ local function SnapshotSession(verbose)
 	local function ProcessType(dmType, dataField, rateField, secretKey)
 		local s = GetSession(dmType)
 		if s and s.combatSources then
+			if secretKey then
+				SetSecretBarScale(secretKey, s.maxAmount, s.combatSources[1] and s.combatSources[1].amountPerSecond or nil)
+			end
 			for idx, source in ipairs(s.combatSources) do
 				local who = GetOrCreateCombatant(source, idx)
 				if who then
@@ -696,12 +755,13 @@ local function SnapshotSession(verbose)
 					if amount > 0 or perSec > 0 then
 						SetTrackedValue(who, dataField, amount, rateField, perSec)
 						who.LastFightIn = Recount.db2.FightNum
-						foundAny = true
-						if who.Name and secretKey then
-							StoreSecretValue(secretKey, who.Name, source.totalAmount, source.amountPerSecond, source.name)
+							foundAny = true
+							if who.Name and secretKey then
+								StoreSecretValue(secretKey, who.Name, source.totalAmount, source.amountPerSecond, source.name)
+								StoreSecretBarValue(secretKey, who.Name, source.totalAmount, source.amountPerSecond)
+							end
 						end
 					end
-				end
 			end
 		end
 	end
@@ -1009,19 +1069,6 @@ function Recount:GetMainWindowBarTextOverride(combatant, modeIndex)
 
 			if healingValueText then
 				local valueText = absorbValueText and string_format("%s + %s", healingValueText, absorbValueText) or healingValueText
-				local barText = self.db and self.db.profile and self.db.profile.MainWindow and self.db.profile.MainWindow.BarText
-				if barText and barText.PerSec then
-					local healingPerSecText = FormatRealtimeValue(healingEntry and healingEntry.perSec)
-					local absorbPerSecText = FormatRealtimeValue(absorbEntry and absorbEntry.perSec)
-					if healingEntry and absorbEntry and healingPerSecText and absorbPerSecText and not IsSecret(healingEntry.perSec) and not IsSecret(absorbEntry.perSec) then
-						healingPerSecText = Recount:FormatLongNums(SafeNumber(healingEntry.perSec) + SafeNumber(absorbEntry.perSec))
-						absorbPerSecText = nil
-					end
-					if healingPerSecText then
-						local perSecText = absorbPerSecText and string_format("%s + %s", healingPerSecText, absorbPerSecText) or healingPerSecText
-						return string_format("%s (%s)", valueText, perSecText)
-					end
-				end
 				return valueText
 			end
 		end
@@ -1041,15 +1088,65 @@ function Recount:GetMainWindowBarTextOverride(combatant, modeIndex)
 		return valueText
 	end
 
-	local barText = self.db and self.db.profile and self.db.profile.MainWindow and self.db.profile.MainWindow.BarText
-	if barText and barText.PerSec then
-		local perSecText = FormatRealtimeValue(entry.perSec)
-		if perSecText then
-			return string_format("%s (%s)", valueText, perSecText)
-		end
+	return valueText
+end
+
+function Recount:GetMainWindowBarValueOverride(combatant, modeIndex)
+	if not self.UseDamageMeter or not self.InCombat then
+		return nil
 	end
 
-	return valueText
+	local combatantName = type(combatant) == "table" and combatant.Name or combatant
+	if not combatantName then
+		return nil
+	end
+
+	local modeData = self.MainWindowData and self.MainWindowData[modeIndex]
+	local modeName = modeData and modeData[1]
+	local modeCategory = modeData and modeData[7]
+
+	if modeCategory == "Healing" and self.db and self.db.profile and self.db.profile.MergeAbsorbs then
+		return nil
+	end
+
+	local modeKey
+	local useRate = false
+	if modeName == L["DPS"] then
+		modeKey = "Damage"
+		useRate = true
+	elseif modeCategory == "Damage" then
+		modeKey = "Damage"
+	elseif modeCategory == "Healing" then
+		modeKey = "Healing"
+	elseif modeCategory == "DamageTaken" then
+		modeKey = "DamageTaken"
+	elseif modeName == L["Absorbs"] then
+		modeKey = "Absorbs"
+	elseif modeName == L["Interrupts"] then
+		modeKey = "Interrupts"
+	elseif modeName == L["Dispels"] then
+		modeKey = "Dispels"
+	elseif modeName == L["Deaths"] then
+		modeKey = "Deaths"
+	end
+
+	if not modeKey then
+		return nil
+	end
+
+	local modeBarData = secretBarValues[modeKey]
+	local entry = GetSecretBarValue(modeKey, combatantName)
+	if not modeBarData or not entry then
+		return nil
+	end
+
+	local value = useRate and entry.perSec or entry.value
+	local maxValue = useRate and modeBarData.maxPerSec or modeBarData.maxValue
+	if value == nil or maxValue == nil then
+		return nil
+	end
+
+	return value, maxValue
 end
 
 SafeCombatCall = function(context, func)

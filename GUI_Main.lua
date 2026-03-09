@@ -1276,14 +1276,32 @@ function Recount:RefreshMainWindow(datarefresh)
 				end
 			end
 
-			percent = 100
-			if MaxValue ~= 0 then
-				percent = 100 * v[2] / MaxValue
-			end
-			me:SetBar(i, lefttext, righttext, percent, "Class", v[3], v[1], me.MainWindowSelectPlayer, v[4])
-			me:FixRow(i)
-			rows[i].name = v[1]
-			if type(Recount.GetMainWindowBarLabelOverride) == "function" then
+				percent = 100
+				if MaxValue ~= 0 then
+					percent = 100 * v[2] / MaxValue
+				end
+				me:SetBar(i, lefttext, righttext, percent, "Class", v[3], v[1], me.MainWindowSelectPlayer, v[4])
+				if type(Recount.GetMainWindowBarValueOverride) == "function" then
+					local overrideValue, overrideMax = Recount:GetMainWindowBarValueOverride(v[4], Recount.db.profile.MainWindowMode)
+					if overrideValue ~= nil and overrideMax ~= nil then
+						local rowBar = rows[i].StatusBar
+						local okRange = pcall(rowBar.SetMinMaxValues, rowBar, 0, overrideMax)
+						local okValue = pcall(rowBar.SetValue, rowBar, overrideValue)
+						if not okRange or not okValue then
+							rowBar:SetMinMaxValues(0, 100)
+							rowBar:SetValue(percent)
+						end
+					else
+						rows[i].StatusBar:SetMinMaxValues(0, 100)
+						rows[i].StatusBar:SetValue(percent)
+					end
+				else
+					rows[i].StatusBar:SetMinMaxValues(0, 100)
+					rows[i].StatusBar:SetValue(percent)
+				end
+				me:FixRow(i)
+				rows[i].name = v[1]
+				if type(Recount.GetMainWindowBarLabelOverride) == "function" then
 				local overrideLabel = Recount:GetMainWindowBarLabelOverride(v[4], Recount.db.profile.MainWindowMode, i + offset)
 				if overrideLabel then
 					rows[i].LeftText:SetText(overrideLabel)
