@@ -273,7 +273,15 @@ function DataModes:DPSReturner(data, num)
 		return 0
 	end
 
-	local _, dps = Recount:MergedPetDamageDPS(data, Recount.db.profile.CurDataSet)
+	local fight = data.Fights[Recount.db.profile.CurDataSet]
+	local dps
+
+	if Recount.UseDamageMeter and Recount.InCombat and fight.DamagePerSecond and fight.DamagePerSecond > 0 then
+		dps = fight.DamagePerSecond
+	else
+		local _
+		_, dps = Recount:MergedPetDamageDPS(data, Recount.db.profile.CurDataSet)
+	end
 
 	if num == 1 then
 		return dps
@@ -663,6 +671,26 @@ local MainWindowModes = {
 	{L["Activity"], DataModes.ActiveTime, TooltipFuncs.ActiveTime, nil, nil, nil, nil},
 }
 
+local DamageMeterSupportedModes = {
+	[L["Damage Done"]] = true,
+	[L["DPS"]] = true,
+	[L["Damage Taken"]] = true,
+	[L["Healing Done"]] = true,
+	[L["Absorbs"]] = true,
+	[L["Deaths"]] = true,
+	[L["Activity"]] = true,
+	[L["Interrupts"]] = true,
+	[L["Dispels"]] = true,
+}
+
+local function IsDamageMeterSupportedMode(modeName)
+	if not Recount.UseDamageMeter then
+		return true
+	end
+
+	return DamageMeterSupportedModes[modeName] == true
+end
+
 function Recount:AddModeTooltip(lname, modefunc, toolfunc, ...)
 	tinsert(MainWindowModes, {lname, modefunc, toolfunc, ...})
 	Recount:SetupMainWindow()
@@ -774,6 +802,13 @@ function Recount:SetupMainWindow()
 		else
 			for k, v in pairs(MainWindowModes) do
 				if MainWindowModes[k][1] == L["Activity"] then
+					MainWindowModes[k] = nil
+				end
+			end
+		end
+		if Recount.UseDamageMeter then
+			for k, v in pairs(MainWindowModes) do
+				if v and not IsDamageMeterSupportedMode(v[1]) then
 					MainWindowModes[k] = nil
 				end
 			end

@@ -13,9 +13,7 @@ local ipairs = ipairs
 local table = table
 local type = type
 
-local BNGetFriendInfo = BNGetFriendInfo
 local BNGetNumFriends = BNGetNumFriends
-local BNGetSelectedFriend = BNGetSelectedFriend
 local GetChannelList = GetChannelList
 local GetNumGroupMembers = GetNumGroupMembers
 local GetNumPartyMembers = GetNumPartyMembers or GetNumSubgroupMembers
@@ -211,7 +209,6 @@ end
 
 function me:SendReport()
 	local Num, Loc1, Loc2
-	local presenceName, battleTag, isBattleTagPresence, toonName, toonID, client, isOnline, totalBNet
 
 	Num = me.ReportWindow.slider:GetValue()
 
@@ -223,10 +220,22 @@ function me:SendReport()
 	end
 
 	if Loc1 == "REALID" then
-		totalBNet = BNGetNumFriends()
-		if (BNGetSelectedFriend() > 0) and (totalBNet > 0) then
-			Loc2, presenceName, battleTag, isBattleTagPresence, toonName, toonID, client, isOnline = BNGetFriendInfo(BNGetSelectedFriend())
-			if not isOnline then
+		local totalBNet = BNGetNumFriends()
+		if C_BattleNet and C_BattleNet.GetFriendAccountInfo and totalBNet > 0 then
+			-- Find first online BNet friend to send to
+			local foundOnline = false
+			for i = 1, totalBNet do
+				local accountInfo = C_BattleNet.GetFriendAccountInfo(i)
+				if accountInfo then
+					local gameAccountInfo = accountInfo.gameAccountInfo
+					if gameAccountInfo and gameAccountInfo.isOnline then
+						Loc2 = accountInfo.bnetAccountID
+						foundOnline = true
+						break
+					end
+				end
+			end
+			if not foundOnline then
 				Recount:Print("No online RealID/Battle Tag Selected")
 				return
 			end

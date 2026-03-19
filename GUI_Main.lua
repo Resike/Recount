@@ -30,8 +30,15 @@ local GetScreenWidth = GetScreenWidth
 local IsAltKeyDown = IsAltKeyDown
 local IsControlKeyDown = IsControlKeyDown
 local IsShiftKeyDown = IsShiftKeyDown
-local SendChatMessage = SendChatMessage
-local UIFrameFade = UIFrameFade
+local SendChatMessage = (C_ChatInfo and C_ChatInfo.SendChatMessage) or SendChatMessage
+local UIFrameFade = UIFrameFade or function(frame, fadeInfo)
+	if fadeInfo.mode == "OUT" then
+		frame:SetAlpha(0)
+	end
+	if fadeInfo.finishedFunc then
+		fadeInfo.finishedFunc(fadeInfo.finishedArg1)
+	end
+end
 
 local GameTooltip = GameTooltip
 local UIParent = UIParent
@@ -473,21 +480,30 @@ end
 
 function me:FixRow(i)
 	local row = Recount.MainWindow.Rows[i]
-	local MaxNameWidth = row:GetWidth() - row.RightText:GetStringWidth() - 4
+	local MaxNameWidth = row:GetWidth() - 4
+	local ok, rightTextWidth = pcall(row.RightText.GetStringWidth, row.RightText)
+	if ok and type(rightTextWidth) == "number" and not (issecretvalue and issecretvalue(rightTextWidth)) then
+		MaxNameWidth = MaxNameWidth - rightTextWidth
+	end
 
 	if MaxNameWidth < 16 then
 		MaxNameWidth = 16
 	end
 
-	local LText = row.LeftText:GetText()
+	local okText, LText = pcall(row.LeftText.GetText, row.LeftText)
+	if not okText or not LText or (issecretvalue and issecretvalue(LText)) then
+		return
+	end
 
 	if not Recount.db.profile.MainWindow.BarText.ServerName then
 		LText = string.gsub(LText, "%-[^ >]+", "")
 	end
 	row.LeftText:SetText(LText)
-	while row.LeftText:GetStringWidth() > MaxNameWidth and #LText >= 2 do
+	local okWidth, leftTextWidth = pcall(row.LeftText.GetStringWidth, row.LeftText)
+	while okWidth and type(leftTextWidth) == "number" and not (issecretvalue and issecretvalue(leftTextWidth)) and leftTextWidth > MaxNameWidth and #LText >= 2 do
 		LText = string.sub(LText, 1, #LText - 1)
 		row.LeftText:SetText(LText.."...")
+		okWidth, leftTextWidth = pcall(row.LeftText.GetStringWidth, row.LeftText)
 	end
 end
 
@@ -885,6 +901,19 @@ end
 
 --Actual Data Functions
 local function sortFunc(a, b)
+	if Recount and Recount.UseDamageMeter and Recount.InCombat and type(Recount.GetMainWindowSortRankOverride) == "function" and Recount.db and Recount.db.profile then
+		local modeIndex = Recount.db.profile.MainWindowMode
+		local rankA = Recount:GetMainWindowSortRankOverride(a[4], modeIndex)
+		local rankB = Recount:GetMainWindowSortRankOverride(b[4], modeIndex)
+		if rankA and rankB and rankA ~= rankB then
+			return rankA < rankB
+		elseif rankA and not rankB then
+			return true
+		elseif rankB and not rankA then
+			return false
+		end
+	end
+
 	if a[2] > b[2] then
 		return true
 	elseif a[2] == b[2] then
@@ -1091,6 +1120,8 @@ function Recount:RefreshMainWindow(datarefresh)
 	local Total = 0
 	local TotalPerSec = 0
 	local Value, PerSec
+	local liveCombatOnly = Recount.UseDamageMeter and Recount.InCombat and type(Recount.HasMainWindowLiveEntry) == "function"
+	local modeIndex = Recount.db and Recount.db.profile and Recount.db.profile.MainWindowMode
 
 	if type(Recount.MainWindowData[Recount.db.profile.MainWindowMode][6]) == "function" then
 		MainWindow.Title:SetText(Recount.MainWindowData[Recount.db.profile.MainWindowMode][6]())
@@ -1124,37 +1155,39 @@ function Recount:RefreshMainWindow(datarefresh)
 			if v and v.type and FiltersShow[v.type] and not (v.type == "Pet" and Recount.db.profile.MergePets and v.Owner and Combatants[v.Owner] and not FiltersShow[Combatants[v.Owner].type]) then -- Elsia: Added owner inheritance filtering for pets
 				if v.Fights and v.Fights[Recount.db.profile.CurDataSet] then
 					Value, PerSec = MainWindow:GetData(v, 1)
+				else
+					Value = 0
+				end
 
-					if Value > 0 then
-						if v.type ~= "Pet" or not Recount.db.profile.MergePets then -- Elsia: Only add to total if not merging pets.
-							Total = Total + Value
-							if type(PerSec) == "number" then
-								TotalPerSec = TotalPerSec + PerSec
-							end
+				if Value > 0 then
+					if v.type ~= "Pet" or not Recount.db.profile.MergePets then -- Elsia: Only add to total if not merging pets.
+						Total = Total + Value
+						if type(PerSec) == "number" then
+							TotalPerSec = TotalPerSec + PerSec
 						end
+					end
 
-						if type(lookup[k]) == "table" then
-							if Value ~= lookup[k][2] then
-								lookup[k][1] = k
-								lookup[k][2] = Value
-								lookup[k][3] = v.enClass -- ClassColors[v.enClass]
-								lookup[k][4] = v
-								lookup[k][5] = PerSec
-								noUpdates = false
-							end
-						else
-							lookup[k] = {k, Value, v.enClass, v, PerSec} -- Recount.Colors:GetColor("Class",v.enClass)
-							tinsert(dispTable, lookup[k])
+					if type(lookup[k]) == "table" then
+						if Value ~= lookup[k][2] then
+							lookup[k][1] = k
+							lookup[k][2] = Value
+							lookup[k][3] = v.enClass -- ClassColors[v.enClass]
+							lookup[k][4] = v
+							lookup[k][5] = PerSec
 							noUpdates = false
 						end
-					elseif type(lookup[k]) == "table" then
-						lookup[k] = nil
+					else
+						lookup[k] = {k, Value, v.enClass, v, PerSec} -- Recount.Colors:GetColor("Class",v.enClass)
+						tinsert(dispTable, lookup[k])
+						noUpdates = false
+					end
+				elseif type(lookup[k]) == "table" then
+					lookup[k] = nil
 
-						for k2, v2 in ipairs(dispTable) do
-							if v2[1] == k then
-								tremove(dispTable, k2)
-								break
-							end
+					for k2, v2 in ipairs(dispTable) do
+						if v2[1] == k then
+							tremove(dispTable, k2)
+							break
 						end
 					end
 				end
@@ -1169,12 +1202,27 @@ function Recount:RefreshMainWindow(datarefresh)
 		MaxValue = dispTable[1][2]
 	end
 
+	local visibleDispTable = dispTable
+	if liveCombatOnly then
+		visibleDispTable = {}
+		for _, entry in ipairs(dispTable) do
+			if Recount:HasMainWindowLiveEntry(entry[4], modeIndex) then
+				tinsert(visibleDispTable, entry)
+			end
+		end
+		if #visibleDispTable > 0 then
+			MaxValue = visibleDispTable[1][2]
+		else
+			MaxValue = 0
+		end
+	end
+
 	local RowWidth = MainWindow:GetWidth() - 4
-	if table.getn(dispTable) > MainWindow.CurRows and MainWindow_Settings.ShowScrollbar == true then
+	if #(visibleDispTable) > MainWindow.CurRows and MainWindow_Settings.ShowScrollbar == true then
 		RowWidth = MainWindow:GetWidth() - 23
 	end
 
-	FauxScrollFrame_Update(MainWindow.ScrollBar, table.getn(dispTable), Recount.MainWindow.CurRows, 20)
+	FauxScrollFrame_Update(MainWindow.ScrollBar, #(visibleDispTable), Recount.MainWindow.CurRows, 20)
 	local offset = FauxScrollFrame_GetOffset(MainWindow.ScrollBar)
 
 	if type(MainWindow.SpecialTotal) == "function" then
@@ -1187,7 +1235,7 @@ function Recount:RefreshMainWindow(datarefresh)
 	local MainWindow_BarText_PerSec = MainWindow_Settings.BarText.PerSec
 	local MainWindow_BarText_Percent = MainWindow_Settings.BarText.Percent
 
-	if not MainWindow_Settings.HideTotalBar and MainWindow.CurRows > 0 and Total > 0 then
+	if not liveCombatOnly and not MainWindow_Settings.HideTotalBar and MainWindow.CurRows > 0 and Total > 0 then
 		if TotalPerSec > 0 then
 			PerSec = Recount:FormatLongNums(TotalPerSec)
 			--PerSec = string_format("%.1f", TotalPerSec)
@@ -1223,8 +1271,8 @@ function Recount:RefreshMainWindow(datarefresh)
 		end
 	end
 
-	for i = 1, MainWindow.CurRows do
-		local v = dispTable[i + offset]
+		for i = 1, MainWindow.CurRows do
+			local v = visibleDispTable[i + offset]
 
 		if v then
 			local percent = 100
@@ -1253,14 +1301,44 @@ function Recount:RefreshMainWindow(datarefresh)
 			elseif MainWindow_BarText_Percent then
 				righttext = string_format("%s (%.1f%%)", righttext, percent)
 			end
-
-			percent = 100
-			if MaxValue ~= 0 then
-				percent = 100 * v[2] / MaxValue
+			if type(Recount.GetMainWindowBarTextOverride) == "function" then
+				local overrideText = Recount:GetMainWindowBarTextOverride(v[4], Recount.db.profile.MainWindowMode)
+				if overrideText then
+					righttext = overrideText
+				end
 			end
-			me:SetBar(i, lefttext, righttext, percent, "Class", v[3], v[1], me.MainWindowSelectPlayer, v[4])
-			me:FixRow(i)
-			rows[i].name = v[1]
+
+				percent = 100
+				if MaxValue ~= 0 then
+					percent = 100 * v[2] / MaxValue
+				end
+				me:SetBar(i, lefttext, righttext, percent, "Class", v[3], v[1], me.MainWindowSelectPlayer, v[4])
+				if type(Recount.GetMainWindowBarValueOverride) == "function" then
+					local overrideValue, overrideMax = Recount:GetMainWindowBarValueOverride(v[4], Recount.db.profile.MainWindowMode)
+					if overrideValue ~= nil and overrideMax ~= nil then
+						local rowBar = rows[i].StatusBar
+						local okRange = pcall(rowBar.SetMinMaxValues, rowBar, 0, overrideMax)
+						local okValue = pcall(rowBar.SetValue, rowBar, overrideValue)
+						if not okRange or not okValue then
+							rowBar:SetMinMaxValues(0, 100)
+							rowBar:SetValue(percent)
+						end
+					else
+						rows[i].StatusBar:SetMinMaxValues(0, 100)
+						rows[i].StatusBar:SetValue(percent)
+					end
+				else
+					rows[i].StatusBar:SetMinMaxValues(0, 100)
+					rows[i].StatusBar:SetValue(percent)
+				end
+				me:FixRow(i)
+				rows[i].name = v[1]
+				if type(Recount.GetMainWindowBarLabelOverride) == "function" then
+				local overrideLabel = Recount:GetMainWindowBarLabelOverride(v[4], Recount.db.profile.MainWindowMode, i + offset)
+				if overrideLabel then
+					rows[i].LeftText:SetText(overrideLabel)
+				end
+			end
 		else
 			rows[i]:Hide()
 		end
@@ -1346,7 +1424,7 @@ function Recount:OpenFightDropDown(myframe)
 
 	local currentorder = 1
 
-	for k, v in pairs(Recount.db2.FoughtWho) do
+	for k, v in ipairs(Recount.db2.FoughtWho) do
 		fightopts.args["fight"..currentorder] = {
 			order = 30 + (currentorder - 1) * 10,
 			name = L["Fight"].." "..k.." - "..v,
@@ -1479,7 +1557,7 @@ function me:CreateFightDropdown(level)
 		end
 		UIDropDownMenu_AddButton(info, level)
 
-		for k, v in pairs(Recount.db2.FoughtWho) do
+		for k, v in ipairs(Recount.db2.FoughtWho) do
 			info.checked = nil
 			info.text = L["Fight"].." "..k.." - "..v
 			if Recount.db.profile.CurDataSet == "Fight"..k then

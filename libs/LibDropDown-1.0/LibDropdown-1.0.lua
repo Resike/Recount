@@ -23,7 +23,7 @@ local wipe = wipe
 local CreateFrame = CreateFrame
 local PlaySound = PlaySound
 local ShowUIPanel = ShowUIPanel
-local GetMouseFocus = GetMouseFocus
+local GetMouseFocus = GetMouseFocus or function() local foci = GetMouseFoci and GetMouseFoci() or {}; return foci[1] end
 local UISpecialFrames = UISpecialFrames
 
 local ChatFrame1 = ChatFrame1

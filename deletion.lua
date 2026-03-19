@@ -13,7 +13,7 @@ local GetNumPartyMembers = GetNumPartyMembers or GetNumSubgroupMembers
 local GetNumRaidMembers = GetNumRaidMembers or GetNumGroupMembers
 local IsInInstance = IsInInstance
 local IsInRaid = IsInRaid
-local IsInScenarioGroup = IsInScenarioGroup
+local IsInScenarioGroup = IsInScenarioGroup or function() return C_Scenario and C_Scenario.IsInScenario() end
 local UnitInRaid = UnitInRaid
 local UnitIsGhost = UnitIsGhost
 

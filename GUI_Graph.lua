@@ -846,7 +846,7 @@ end
 
 function Recount:GraphRefreshCombat()
 	local combat = Recount.db2.CombatTimes
-	local size = table.getn(combat)
+	local size = #(combat)
 	FauxScrollFrame_Update(Recount.GraphWindow.ScrollBar2, size, 10, 20)
 	local offset = FauxScrollFrame_GetOffset(Recount.GraphWindow.ScrollBar2)
 	local Rows = Recount.GraphWindow.TimeRows

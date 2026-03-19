@@ -30,6 +30,8 @@ local UIDropDownMenu_SetAnchor = UIDropDownMenu_SetAnchor
 local UIParent = UIParent
 local OpacitySliderFrame = OpacitySliderFrame
 
+local WOW_RETAIL = WOW_PROJECT_ID == WOW_PROJECT_MAINLINE
+
 local me = {}
 
 local FreeWindows = {}
@@ -145,7 +147,7 @@ local function Color_Change()
 	if not ColorPickerFrame.hasOpacity then
 		TempColor.a = nil
 	else
-		TempColor.a = OpacitySliderFrame:GetValue()
+		TempColor.a = WOW_RETAIL and ColorPickerFrame.Content.ColorPicker:GetColorAlpha() or 1.0 - OpacitySliderFrame:GetValue()
 	end
 
 	Recount.Colors:SetColor(Cur_Branch, Cur_Name, TempColor)
@@ -153,7 +155,7 @@ end
 
 local function Opacity_Change()
 	local r, g, b = ColorPickerFrame:GetColorRGB()
-	local a = OpacitySliderFrame:GetValue()
+	local a = WOW_RETAIL and ColorPickerFrame.Content.ColorPicker:GetColorAlpha() or 1.0 - OpacitySliderFrame:GetValue()
 
 	TempColor.r = r
 	TempColor.g = g

@@ -35,7 +35,11 @@ local RAID_CLASS_COLORS = RAID_CLASS_COLORS
 local WOW_RETAIL = WOW_PROJECT_ID == WOW_PROJECT_MAINLINE
 local WOW_PANDA_CLASSIC = WOW_PROJECT_ID == WOW_PROJECT_MISTS_CLASSIC or WOW_PROJECT_ID == WOW_PROJECT_CATACLYSM_CLASSIC or WOW_PROJECT_ID == WOW_PROJECT_WRATH_CLASSIC or WOW_PROJECT_ID == WOW_PROJECT_BURNING_CRUSADE_CLASSIC
 
-if FillLocalizedClassList then
+if LOCALIZED_CLASS_NAMES_MALE then
+	for k, v in pairs(LOCALIZED_CLASS_NAMES_MALE) do
+		BC[k] = v
+	end
+elseif FillLocalizedClassList then
 	FillLocalizedClassList(BC, false) -- We are sexist here but not much of a choice, when there is no neutral
 elseif LocalizedClassList then
 	BC = LocalizedClassList(false)
@@ -260,6 +264,7 @@ end
 
 function me:CreateWindowModuleSelection(parent)
 	me.ModuleOptions = CreateFrame("Frame", nil, parent)
+	local useNativeDamageMeter = C_DamageMeter ~= nil
 
 	local theFrame = me.ModuleOptions
 
@@ -302,7 +307,11 @@ function me:CreateWindowModuleSelection(parent)
 		end
 	end)
 	theFrame.Deaths = me:CreateSavedCheckbox(L["Deaths"], theFrame, "Modules", "Deaths")
-	theFrame.Deaths:SetPoint("TOPLEFT", theFrame.OverhealingDone, "BOTTOMLEFT", 0, 0)
+	if useNativeDamageMeter then
+		theFrame.Deaths:SetPoint("TOPLEFT", theFrame, "TOPLEFT", 8, -20)
+	else
+		theFrame.Deaths:SetPoint("TOPLEFT", theFrame.OverhealingDone, "BOTTOMLEFT", 0, 0)
+	end
 	theFrame.Deaths:SetScript("OnClick", function(this)
 		if this:GetChecked() then
 			this:SetChecked(true)
@@ -347,7 +356,11 @@ function me:CreateWindowModuleSelection(parent)
 		end
 	end)
 	theFrame.Activity = me:CreateSavedCheckbox(L["Activity"], theFrame, "Modules", "Activity")
-	theFrame.Activity:SetPoint("TOPLEFT", theFrame.HOTUptime, "BOTTOMLEFT", 0, 0)
+	if useNativeDamageMeter then
+		theFrame.Activity:SetPoint("TOPLEFT", theFrame.Deaths, "BOTTOMLEFT", 0, 0)
+	else
+		theFrame.Activity:SetPoint("TOPLEFT", theFrame.HOTUptime, "BOTTOMLEFT", 0, 0)
+	end
 	theFrame.Activity:SetScript("OnClick", function(this)
 		if this:GetChecked() then
 			this:SetChecked(true)
@@ -361,6 +374,16 @@ function me:CreateWindowModuleSelection(parent)
 			Recount:RefreshMainWindow()
 		end
 	end)
+	if useNativeDamageMeter then
+		theFrame.HealingTaken:Hide()
+		theFrame.HealingTaken:Disable()
+		theFrame.OverhealingDone:Hide()
+		theFrame.OverhealingDone:Disable()
+		theFrame.DOTUptime:Hide()
+		theFrame.DOTUptime:Disable()
+		theFrame.HOTUptime:Hide()
+		theFrame.HOTUptime:Disable()
+	end
 end
 
 function me:CreateClassColorSelection(parent)
@@ -750,7 +773,7 @@ end
 
 function me:RefreshStatusBars()
 	local BarTextures = SM:List("statusbar")
-	local size = table.getn(BarTextures)
+	local size = #(BarTextures)
 
 	FauxScrollFrame_Update(me.TextureOptions.ScrollBar, size, 13, 12)
 	local offset = FauxScrollFrame_GetOffset(me.TextureOptions.ScrollBar)
@@ -1009,7 +1032,7 @@ function me:CreateTextureSelection(parent)
 	end
 	me:UpdateStatusBars()
 
-	if table.getn(BarTextures) <= 13 then
+	if #(BarTextures) <= 13 then
 		for i = 1, 13 do
 			theFrame.Rows[i]:SetWidth(196)
 			theFrame.Rows[i]:SetPoint("TOP", theFrame, "TOP", 0, -i * 14 - 2)
@@ -1071,7 +1094,7 @@ end
 
 function me:RefreshFonts()
 	local Fonts = SM:List("font")
-	local size = table.getn(Fonts)
+	local size = #(Fonts)
 
 	FauxScrollFrame_Update(me.FontOptions.ScrollBar, size, 13, 12)
 	local offset = FauxScrollFrame_GetOffset(me.FontOptions.ScrollBar)
@@ -1106,7 +1129,7 @@ function me:CreateFontSelection(parent)
 	end
 	me:UpdateFonts()
 
-	if table.getn(Fonts) <= 13 then
+	if #(Fonts) <= 13 then
 		for i = 1, 13 do
 			theFrame.Rows[i]:SetWidth(196)
 			theFrame.Rows[i]:SetPoint("TOP", theFrame, "TOP", 0, -i * 14 - 2)
@@ -1346,6 +1369,7 @@ end
 
 function me:SetupRealtimeOptions(parent)
 	me.RealtimeOptions = CreateFrame("Frame", nil, parent)
+	local useNativeDamageMeter = C_DamageMeter ~= nil
 	local theFrame = me.RealtimeOptions
 	theFrame:SetHeight(parent:GetHeight() - 34)
 	theFrame:SetWidth(200)
@@ -1394,10 +1418,18 @@ function me:SetupRealtimeOptions(parent)
 		Recount:CreateRealtimeWindow("!RAID", "HEALINGTAKEN", "Raid HTPS")
 	end)
 	theFrame.RHTPSButton:SetText(L["HTPS"])
+	if useNativeDamageMeter then
+		theFrame.RHTPSButton:Hide()
+		theFrame.RHTPSButton:Disable()
+	end
 
 	theFrame.TitleRaid = theFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 	theFrame.TitleRaid:SetText(L["Network"])
-	theFrame.TitleRaid:SetPoint("TOP", theFrame, "TOP", 0, -106)
+	if useNativeDamageMeter then
+		theFrame.TitleRaid:SetPoint("TOP", theFrame, "TOP", 0, -80)
+	else
+		theFrame.TitleRaid:SetPoint("TOP", theFrame, "TOP", 0, -106)
+	end
 
 	theFrame.FPSButton = CreateFrame("Button", nil, theFrame, "UIPanelButtonTemplate")
 	theFrame.FPSButton:SetWidth(90)

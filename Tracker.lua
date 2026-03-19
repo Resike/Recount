@@ -34,7 +34,16 @@ local GetLocale = GetLocale
 local GetNetStats = GetNetStats
 local GetNumDeclensionSets = GetNumDeclensionSets
 local GetNumGroupMembers = GetNumGroupMembers
-local GetSpellInfo = GetSpellInfo
+local GetSpellInfo = function(spellId)
+	if C_Spell and C_Spell.GetSpellInfo then
+		local info = C_Spell.GetSpellInfo(spellId)
+		if info then
+			return info.name, nil, info.iconID, info.castTime, info.minRange, info.maxRange, info.spellID, info.originalIconID
+		end
+	elseif _G.GetSpellInfo then
+		return _G.GetSpellInfo(spellId)
+	end
+end
 local GetTime = GetTime
 local IsInRaid = IsInRaid
 local UnitExists = UnitExists
