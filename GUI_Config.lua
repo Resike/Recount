@@ -804,10 +804,9 @@ function me:SetTestBar(num, left, right, value, color)
 	if Recount.db.profile.BarTextColorSwap then
 		if color then
 			Row.StatusBar:SetStatusBarColor(Recount.db.profile.Colors.Bar["Bar Text"].r, Recount.db.profile.Colors.Bar["Bar Text"].g, Recount.db.profile.Colors.Bar["Bar Text"].b, Recount.db.profile.Colors.Bar["Bar Text"].a)
+			Row.LeftText:SetTextColor(color.r, color.g, color.b, color.a)
+			Row.RightText:SetTextColor(color.r, color.g, color.b, color.a)
 		end
-
-		Row.LeftText:SetTextColor(color.r, color.g, color.b, color.a)
-		Row.RightText:SetTextColor(color.r, color.g, color.b, color.a)
 	else
 
 	if color then

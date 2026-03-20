@@ -25,7 +25,6 @@ local UnitClass = UnitClass
 local UnitLevel = UnitLevel
 local UnitGroupRolesAssigned = UnitGroupRolesAssigned
 local IsInRaid = IsInRaid
-local date = date
 local issecretvalue = issecretvalue
 local string_format = string.format
 local string_find = string.find
@@ -591,6 +590,12 @@ local function GetSpellSource(dmType, guid, sessionType)
 			return sourceData
 		end
 		return nil
+	elseif sessionType == DM_Current then
+		ok, sourceData = pcall(C_DamageMeter.GetCombatSessionSourceFromType, DM_Current, dmType, guid)
+		if ok and sourceData and sourceData.combatSpells and #sourceData.combatSpells > 0 then
+			return sourceData
+		end
+		return nil
 	end
 
 	if combatSessionID then
@@ -598,16 +603,6 @@ local function GetSpellSource(dmType, guid, sessionType)
 		if ok and sourceData and sourceData.combatSpells and #sourceData.combatSpells > 0 then
 			return sourceData
 		end
-	end
-
-	ok, sourceData = pcall(C_DamageMeter.GetCombatSessionSourceFromType, DM_Current, dmType, guid)
-	if ok and sourceData and sourceData.combatSpells and #sourceData.combatSpells > 0 then
-		return sourceData
-	end
-
-	ok, sourceData = pcall(C_DamageMeter.GetCombatSessionSourceFromType, DM_Overall, dmType, guid)
-	if ok and sourceData and sourceData.combatSpells and #sourceData.combatSpells > 0 then
-		return sourceData
 	end
 
 	return nil
@@ -742,7 +737,7 @@ local function SnapshotSession(verbose)
 
 					if who.Name then
 						StoreSecretValue("Damage", who.Name, source.totalAmount, source.amountPerSecond, source.name)
-							StoreSecretBarValue("Damage", who.Name, source.totalAmount, source.amountPerSecond, i)
+						StoreSecretBarValue("Damage", who.Name, source.totalAmount, source.amountPerSecond, i)
 						if verbose and (IsSecret(source.totalAmount) or IsSecret(source.amountPerSecond)) then
 							DP("  Stored damage secrets for: " .. who.Name)
 						end
@@ -788,13 +783,13 @@ local function SnapshotSession(verbose)
 					if amount > 0 or perSec > 0 then
 						SetTrackedValue(who, dataField, amount, rateField, perSec)
 						who.LastFightIn = Recount.db2.FightNum
-							foundAny = true
-							if who.Name and secretKey then
-								StoreSecretValue(secretKey, who.Name, source.totalAmount, source.amountPerSecond, source.name)
-								StoreSecretBarValue(secretKey, who.Name, source.totalAmount, source.amountPerSecond, idx)
-							end
+						foundAny = true
+						if who.Name and secretKey then
+							StoreSecretValue(secretKey, who.Name, source.totalAmount, source.amountPerSecond, source.name)
+							StoreSecretBarValue(secretKey, who.Name, source.totalAmount, source.amountPerSecond, idx)
 						end
 					end
+				end
 			end
 		end
 	end
@@ -1085,10 +1080,6 @@ function Recount:GetMainWindowBarTextOverride(combatant, modeIndex)
 	local valueText = FormatRealtimeValue(useRate and entry.perSec or entry.value)
 	if not valueText then
 		return nil
-	end
-
-	if useRate then
-		return valueText
 	end
 
 	return valueText

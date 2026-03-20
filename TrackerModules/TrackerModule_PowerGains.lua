@@ -126,11 +126,13 @@ function Recount:AddGain(source, victim, ability, amount, attribute,srcGUID,srcF
 			Recount:AddCombatant(source, sourceowner, srcGUID, srcFlags, sourceownerID)
 		end -- Elsia: Until here is if pets heal anybody.
 		local sourceData = dbCombatants[source]
-		Recount:SetActive(sourceData)
+		if sourceData then
+			Recount:SetActive(sourceData)
 
-		Recount:AddAmount(sourceData,DataAmount,amount)
-		Recount:AddTableDataSum(sourceData, DataTable, ability, victim, amount)
-		Recount:AddTableDataSum(sourceData, DataTable2, victim, ability, amount)
+			Recount:AddAmount(sourceData, DataAmount, amount)
+			Recount:AddTableDataSum(sourceData, DataTable, ability, victim, amount)
+			Recount:AddTableDataSum(sourceData, DataTable2, victim, ability, amount)
+		end
 	end
 end
 

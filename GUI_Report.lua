@@ -94,7 +94,8 @@ function me:AddRow()
 	Row.Enabled.id = CurRow
 	Row.Enabled:SetScript("OnClick", function(this)
 		if this:GetChecked() then
-			me:UncheckAll()this:SetChecked(true)
+			me:UncheckAll()
+			this:SetChecked(true)
 			me.Selected = ReportList[this.id][1]
 		else
 			this:SetChecked(false)

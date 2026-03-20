@@ -442,11 +442,14 @@ function me:RefreshDeathDetails()
 	local Selected = (Recount.DetailWindow.DeathMode.SelectedNum or 1) - offset
 
 	for i = 1, 17 do
-		Row = Recount.DetailWindow.DeathMode.Deaths[i] or 0
+		Row = Recount.DetailWindow.DeathMode.Deaths[i]
+		if not Row then
+			break
+		end
 		DataRow = Data and Data[i + offset]
 		if DataRow then
 			Row.Data = DataRow
-			Row.Time:SetText(date("%H:%M:%S",DataRow.DeathAt))
+			Row.Time:SetText(date("%H:%M:%S", DataRow.DeathAt))
 			if DataRow.KilledBy then
 				Row.Who:SetText(DataRow.KilledBy)
 			else

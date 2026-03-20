@@ -66,7 +66,7 @@ function Recount:SetZoneGroupFilter(instanceType, groupType)
 		end
 		Recount.CurrentDataCollect = true
 	else
-		if Recount.db.profile.HideCollect and Recount.MainWindow:IsShown() or not Recount.db.profile.GlobalDataCollect then
+		if Recount.db.profile.HideCollect and Recount.MainWindow:IsShown() and not Recount.db.profile.GlobalDataCollect then
 			Recount.MainWindow:Hide()
 		end
 		Recount.CurrentDataCollect = false

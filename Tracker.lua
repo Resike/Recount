@@ -762,7 +762,7 @@ local function IgnoreAurasUpdate(self, elapsed)
 		local num = 0
 		for k, v in pairs(IgnoreAuras) do
 			if v + 10 < GetTime() then
-				v = nil
+				IgnoreAuras[k] = nil
 			else
 				num = num + 1
 			end
@@ -1294,7 +1294,7 @@ function Recount:AddCurrentEvent(who, eventType, incoming, number, event)
 		name = name.."-"..realm
 	end
 
-	if (not unit) or (name ~= who.Name) and who.UnitLockout < Recount.UnitLockout then
+	if ((not unit) or (name ~= who.Name)) and who.UnitLockout < Recount.UnitLockout then
 		unit = Recount:FindUnit(who.Name)
 		who.unit = unit
 		who.UnitLockout = Recount.CurTime
@@ -1727,7 +1727,6 @@ function Recount:DetectPet(name, nGUID, nFlags)
 					if not owner then
 						owner = Recount:GetPetOwnerFromTooltip(nGUID)
 						if dbCombatants[owner] then
-							owner = owner
 							ownerID = dbCombatants[owner].GUID
 						end
 					end
@@ -2355,7 +2354,7 @@ end
 
 local deathargs = {}
 local timeofdeath
-local doubleDeathDelay
+--local doubleDeathDelay
 function Recount:AddDeathData(source, victim, skill, srcGUID, srcFlags, dstGUID, dstFlags, spellId)
 	if not Recount.db.profile.Modules.Deaths then
 		return
@@ -2433,7 +2432,7 @@ function Recount:AddDeathData(source, victim, skill, srcGUID, srcFlags, dstGUID,
 			elseif skill then
 				victimData.LastKilledBy = skill
 				victimData.LastKilledAt = timeofdeath
-			elseif not victimData.DoubleDeathSpellID or doubleDeathDelay >= 2 then -- We don't count spirits and ghouls
+			elseif not victimData.DoubleDeathSpellID then -- We don't count spirits and ghouls
 				--The case where we actually add a deathcount
 				Recount:AddAmount(victimData, "DeathCount", 1)
 			end

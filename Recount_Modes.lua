@@ -813,17 +813,13 @@ function Recount:SetupMainWindow()
 				end
 			end
 		end
-		for i = 1, #MainWindowModes do
-			if MainWindowModes[i] == nil then
-				local x = i + 1
-				for k = x, #MainWindowModes do
-					MainWindowModes[k - 1] = MainWindowModes[k]
-					if k == #MainWindowModes then
-						MainWindowModes[k] = nil
-					end
-				end
+		local compacted = {}
+		for k in pairs(MainWindowModes) do
+			if MainWindowModes[k] ~= nil then
+				tinsert(compacted, MainWindowModes[k])
 			end
 		end
+		MainWindowModes = compacted
 		Recount:LoadMainWindowData(MainWindowModes)
 	end
 end

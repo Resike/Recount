@@ -440,13 +440,18 @@ function Recount:DeleteCombatant(name)
 			for k, v in pairs(dbCombatants[owner].Pet) do
 				if v == name then
 					tremove(dbCombatants[owner].Pet, k) -- Elsia: Remove deleted pet
+					break
 				end
 			end
 		end
 	end
 
 	if dbCombatants[name].Pet then
-		for k, v in pairs(dbCombatants[name].Pet) do
+		local pets = {}
+		for _, v in pairs(dbCombatants[name].Pet) do
+			tinsert(pets, v)
+		end
+		for _, v in ipairs(pets) do
 			me:DeleteCombatant(v) -- Elsia: Delete all pets with owner
 		end
 	end

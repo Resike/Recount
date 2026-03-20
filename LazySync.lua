@@ -375,7 +375,7 @@ function Recount:OnCommReceive(prefix, Msgs, distribution, target)
 	target = Ambiguate(target, "none")
 	if distribution == "WHISPER" then
 		local worked, cmd, owner, name
-		worked, cmd, owner, name, syncin["Damage"], syncin["DamageTaken"], syncin["Healing"], syncin["OverHealing"], syncin["HealingTaken"], syncin["ActiveTime"] = Recount:Deserialize(Msgs)
+		worked, cmd, owner, name, syncin["Damage"], syncin["DamageTaken"], syncin["Healing"], syncin["Overhealing"], syncin["HealingTaken"], syncin["ActiveTime"] = Recount:Deserialize(Msgs)
 		if worked == true then
 			if cmd == "PU" then -- Player Update
 				--Recount:DPrint(cmd .." "..owner.." "..name.." "..(syncin["Damage"] or "nil").." "..(syncin["DamageTaken"] or "nil").." "..(syncin["Healing"] or "nil").." "..(syncin["OverHealing"] or "nil").." "..(syncin["HealingTaken"] or "nil").." "..(syncin["ActiveTime"] or "nil"))
@@ -535,15 +535,21 @@ function Recount:FlagSync()
 	if IsInRaid() and GetNumRaidMembers() > 0 then
 		for i = 1, GetNumRaidMembers(), 1 do
 			if UnitExists("raid"..i) then
-				dbCombatants[UnitName("raid"..i)].lazysync = true
-				Recount.lazysync = true
+				local combatant = dbCombatants[UnitName("raid"..i)]
+				if combatant then
+					combatant.lazysync = true
+					Recount.lazysync = true
+				end
 			end
 		end
 	elseif GetNumPartyMembers() > 0 then
 		for i = 1, GetNumPartyMembers(), 1 do
 			if UnitExists("party"..i) then
-				dbCombatants[UnitName("party"..i)].lazysync = true
-				Recount.lazysync = true
+				local combatant = dbCombatants[UnitName("party"..i)]
+				if combatant then
+					combatant.lazysync = true
+					Recount.lazysync = true
+				end
 			end
 		end
 	end

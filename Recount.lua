@@ -15,7 +15,6 @@ Recount.Version = tonumber(string.sub("$Revision: 1604 $", 12, -3))
 
 local _G = _G
 local abs = abs
-local assert = assert
 local collectgarbage = collectgarbage
 local date = date
 local getmetatable = getmetatable
@@ -32,7 +31,6 @@ local tinsert = table.insert
 local tonumber = tonumber
 local tremove = table.remove
 local type = type
-local unpack = unpack
 
 local C_PetBattles = C_PetBattles
 local GetNumGroupMembers = GetNumGroupMembers
@@ -803,7 +801,7 @@ function Recount:INSTANCE_ENCOUNTER_ENGAGE_UNIT()
 end
 
 function Recount:ReportVersions() -- Elsia: Functionified so GUI can use it too
-	if not Recount.lazysync then
+	if not Recount.db.profile.EnableSync then
 		Recount:Print(L["Sync is disabled."])
 	elseif GetNumGroupMembers() == 0 then
 		Recount:Print(L["No other Recount users found."])
@@ -1018,7 +1016,7 @@ function Recount:FindPetUnitFromFlags(unitFlags, unitGUID)
 		return
 	end
 	-- Check for my pet
-	if bit_band(unitFlags, COMBATLOG_OBJECT_TYPE_PET) ~= 0 and bit_band(COMBATLOG_OBJECT_AFFILIATION_MINE) ~= 0 then
+	if bit_band(unitFlags, COMBATLOG_OBJECT_TYPE_PET) ~= 0 and bit_band(unitFlags, COMBATLOG_OBJECT_AFFILIATION_MINE) ~= 0 then
 		return "pet" -- Elsia: My pet is easy
 	end
 	-- Check for raid and party pets.
@@ -1631,7 +1629,7 @@ end
 -- Moved into a seperate function
 function Recount:LeaveCombat(Time)
 	if Recount.db.profile.MainWindow.AutoHide then
-		Recount.RefreshMainWindow()
+		Recount:RefreshMainWindow()
 		Recount.MainWindow:Show()
 	end
 	-- Did we actually fight someone?
