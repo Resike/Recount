@@ -19,13 +19,19 @@ local table = table
 
 local GetScreenHeight = GetScreenHeight
 local GetScreenWidth = GetScreenWidth
-local ToggleDropDownMenu = ToggleDropDownMenu
+local LD = LibStub("LibDropdown-1.0")
 
 local ColorPickerFrame = ColorPickerFrame
 local CreateFrame = CreateFrame
 
-local UIDropDownMenu_AddButton = UIDropDownMenu_AddButton
-local UIDropDownMenu_SetAnchor = UIDropDownMenu_SetAnchor
+local UIFrameFade = UIFrameFade or function(frame, fadeInfo)
+	if fadeInfo.mode == "OUT" then
+		frame:SetAlpha(0)
+	end
+	if fadeInfo.finishedFunc then
+		fadeInfo.finishedFunc(fadeInfo.finishedArg1)
+	end
+end
 
 local UIParent = UIParent
 local OpacitySliderFrame = OpacitySliderFrame
@@ -166,70 +172,80 @@ local function Opacity_Change()
 end
 
 
-local info = {}
-function Recount.CreateColorDropdown(self, level)
-	if (not level) then
-		return
-	end
-	for k in pairs(info) do
-		info[k] = nil
-	end
-	if (level == 1) then
-		-- Create the title of the menu
-		local TopColor, BotColor
+local colormenuframe
 
-		TopColor = Recount.Colors:GetColor("Realtime",WhichWindow.TitleText.." Top")
-		BotColor = Recount.Colors:GetColor("Realtime",WhichWindow.TitleText.." Bottom")
+local function OpenColorPickerForEntry(branch, name, window)
+	Cur_Branch = branch
+	Cur_Name = name
 
-		info.isTitle = 1
-		info.hasColorSwatch = 1
-		info.r = TopColor.r
-		info.g = TopColor.g
-		info.b = TopColor.b
-		info.hasOpacity = 1
-		info.opacity = TopColor.a
-		info.text = L["Top Color"].." "
-		info.notCheckable = 1
-		info.swatchFunc = function()
-			Cur_Branch = "Realtime"
-			Cur_Name = WhichWindow.TitleText.." Top"
-			Color_Change()
-		end
-		info.opacityFunc = function()
-		Cur_Branch = "Realtime"
-			Cur_Name = WhichWindow.TitleText.." Top"
-			Opacity_Change()
-		end
-		UIDropDownMenu_AddButton(info, level)
+	local color = Recount.Colors:GetColor("Realtime", name)
 
-		info.isTitle = 1
-		info.hasColorSwatch = 1
-		info.r = BotColor.r
-		info.g = BotColor.g
-		info.b = BotColor.b
-		info.hasOpacity = 1
-		info.opacity = BotColor.a
-		info.text = L["Bottom Color"].." "
-		info.notCheckable = 1
-		info.swatchFunc = function()
-			Cur_Branch = "Realtime"
-			Cur_Name = WhichWindow.TitleText.." Bottom"
-			Color_Change()
-		end
-		info.opacityFunc = function()
-			Cur_Branch = "Realtime"
-			Cur_Name = WhichWindow.TitleText.." Bottom"
-			Opacity_Change()
-		end
-		UIDropDownMenu_AddButton(info, level)
+	TempColor.r = color.r
+	TempColor.g = color.g
+	TempColor.b = color.b
+	TempColor.a = color.a
+
+	ColorPickerFrame.hasOpacity = true
+	ColorPickerFrame.opacity = color.a or 1
+	ColorPickerFrame:SetColorRGB(color.r, color.g, color.b)
+	ColorPickerFrame.func = Color_Change
+	ColorPickerFrame.opacityFunc = Opacity_Change
+	ColorPickerFrame.cancelFunc = function()
+		Recount.Colors:SetColor(branch, name, TempColor)
 	end
+
+	ShowUIPanel(ColorPickerFrame)
+end
+
+local function Faded_Color(self)
+	self:Release()
+end
+
+local function FadeColorMenu(frame)
+	local fadeInfo = {}
+	fadeInfo.mode = "OUT"
+	fadeInfo.timeToFade = 0.1
+	fadeInfo.finishedFunc = Faded_Color
+	fadeInfo.finishedArg1 = frame
+	UIFrameFade(frame, fadeInfo)
 end
 
 function Recount:ColorDropDownOpen(myframe)
-	-- Resike: Should rewrite this.
-	Recount_ColorDropDownMenu = CreateFrame("Frame", "Recount_ColorDropDownMenu", myframe)
-	Recount_ColorDropDownMenu.displayMode = "MENU"
-	Recount_ColorDropDownMenu.initialize = Recount.CreateColorDropdown
+	colormenuframe = colormenuframe and colormenuframe:Release()
+
+	local coloropts = {
+		type = "group",
+		args = {
+			topcolor = {
+				order = 10,
+				name = L["Top Color"],
+				type = "execute",
+				func = function()
+					OpenColorPickerForEntry("Realtime", WhichWindow.TitleText.." Top", WhichWindow)
+					if colormenuframe then
+						FadeColorMenu(colormenuframe)
+					end
+				end,
+			},
+			bottomcolor = {
+				order = 20,
+				name = L["Bottom Color"],
+				type = "execute",
+				func = function()
+					OpenColorPickerForEntry("Realtime", WhichWindow.TitleText.." Bottom", WhichWindow)
+					if colormenuframe then
+						FadeColorMenu(colormenuframe)
+					end
+				end,
+			},
+		}
+	}
+
+	colormenuframe = colormenuframe or LD:OpenAce3Menu(coloropts)
+	colormenuframe:SetClampedToScreen(true)
+	colormenuframe:SetAlpha(1.0)
+	colormenuframe:Show()
+
 	local leftPos = myframe:GetLeft() -- Elsia: Side code adapted from Mirror
 	local rightPos = myframe:GetRight()
 	local side
@@ -250,7 +266,9 @@ function Recount:ColorDropDownOpen(myframe)
 		side = "TOPRIGHT"
 		oside = "TOPLEFT"
 	end
-	UIDropDownMenu_SetAnchor(Recount_ColorDropDownMenu , 0, 0, oside, myframe, side)
+
+	colormenuframe:ClearAllPoints()
+	colormenuframe:SetPoint(oside, myframe, side, 0, 0)
 end
 
 function me:CreateRealtimeWindow(who, tracking, ending) -- Elsia: This function creates a new window and stores it. To other ways, either override it's storage or use the other function
@@ -356,8 +374,7 @@ function me:CreateRealtimeWindow(who, tracking, ending) -- Elsia: This function 
 	g:SetScript("OnMouseDown", function(self, button)
 		WhichWindow = self.Window
 		Recount:ColorDropDownOpen(WhichWindow)
-		ToggleDropDownMenu(1, nil, Recount_ColorDropDownMenu)
-	end) --, WhichWindow, 0, WhichWindow:GetHeight()) end)
+	end)
 
 	theFrame.DetermineGridSpacing = me.DetermineGridSpacing
 	theFrame.Graph = g
