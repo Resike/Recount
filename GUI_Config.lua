@@ -25,8 +25,8 @@ local IsInInstance = IsInInstance
 local FauxScrollFrame_GetOffset = FauxScrollFrame_GetOffset
 local FauxScrollFrame_OnVerticalScroll = FauxScrollFrame_OnVerticalScroll
 local FauxScrollFrame_Update = FauxScrollFrame_Update
-local UIDropDownMenu_AddButton = UIDropDownMenu_AddButton
-local UIDropDownMenu_SetSelectedID = UIDropDownMenu_SetSelectedID
+local UIDropDownMenu_AddButton = UIDropDownMenu_AddButton or function() end
+local UIDropDownMenu_SetSelectedID = UIDropDownMenu_SetSelectedID or function() end
 
 local GameTooltip = GameTooltip
 

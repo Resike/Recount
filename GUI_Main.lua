@@ -46,8 +46,8 @@ local UIParent = UIParent
 local FauxScrollFrame_GetOffset = FauxScrollFrame_GetOffset
 local FauxScrollFrame_Update = FauxScrollFrame_Update
 local FauxScrollFrame_OnVerticalScroll = FauxScrollFrame_OnVerticalScroll
-local UIDropDownMenu_AddButton = UIDropDownMenu_AddButton
-local UIDropDownMenu_SetAnchor = UIDropDownMenu_SetAnchor
+local UIDropDownMenu_AddButton = UIDropDownMenu_AddButton or function() end
+local UIDropDownMenu_SetAnchor = UIDropDownMenu_SetAnchor or function() end
 
 local WOW_PANDA_CLASSIC = WOW_PROJECT_ID == WOW_PROJECT_MISTS_CLASSIC
 
