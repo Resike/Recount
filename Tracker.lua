@@ -26,7 +26,7 @@ local tonumber = tonumber
 local type = type
 local unpack = unpack
 
-local CombatLogGetCurrentEventInfo = CombatLogGetCurrentEventInfo
+local CombatLogGetCurrentEventInfo = CombatLogGetCurrentEventInfo or (C_CombatLog and C_CombatLog.GetCurrentEventInfo)
 local CreateFrame = CreateFrame
 local DeclineName = DeclineName
 local GetFramerate = GetFramerate
