@@ -100,7 +100,7 @@ function Recount:ScaleWindows(scale, first)
 
 			if v:GetScript("OnMouseUp") then
 				v.isMoving = true
-				v:GetScript("OnMouseUp")
+				v:GetScript("OnMouseUp")(v, "LeftButton")
 				v.isMoving = false
 			end
 		end
