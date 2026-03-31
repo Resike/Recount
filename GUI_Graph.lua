@@ -746,9 +746,11 @@ end
 function Recount:CheckFontStringLength(fontstring, maxwidth)
 	local Text = fontstring:GetText()
 
-	while fontstring:GetStringWidth() > maxwidth do
+	local ok, sw = pcall(fontstring.GetStringWidth, fontstring)
+	while ok and type(sw) == "number" and not (issecretvalue and issecretvalue(sw)) and sw > maxwidth do
 		Text = string.sub(Text, 1, string.len(Text) - 1)
 		fontstring:SetText(Text.."...")
+		ok, sw = pcall(fontstring.GetStringWidth, fontstring)
 	end
 end
 

@@ -476,14 +476,18 @@ function Recount:WrapFontString(fontstring, maxwidth)
 	local Returning = ""
 	local Temp, NextWhite
 
-	while fontstring:GetStringWidth() > maxwidth do
+	local ok, sw = pcall(fontstring.GetStringWidth, fontstring)
+	while ok and type(sw) == "number" and not (issecretvalue and issecretvalue(sw)) and sw > maxwidth do
 		Temp = string.reverse(Text)
 		local _
 		_, NextWhite = string.find(Temp,"( +)")
 
+		if not NextWhite then break end
+
 		Returning = string.sub(Text, string.len(Text) - NextWhite + 1, string.len(Text))..Returning
 		Text = string.sub(Text, 1, string.len(Text) - NextWhite)
 		fontstring:SetText(Text)
+		ok, sw = pcall(fontstring.GetStringWidth, fontstring)
 	end
 	return Returning
 end
