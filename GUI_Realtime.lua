@@ -320,7 +320,6 @@ function me:CreateRealtimeWindow(who, tracking, ending) -- Elsia: This function 
 	theFrame.DragBottomLeft:SetPoint("BOTTOMLEFT", theFrame, "BOTTOMLEFT", 0, 0)
 	theFrame.DragBottomLeft:EnableMouse(true)
 	theFrame.DragBottomLeft:SetScript("OnMouseDown", function(this, button)
-		Recount:DPrint("y")
 		if (((not this:GetParent().isLocked) or (this:GetParent().isLocked == 0)) and (button == "LeftButton")) then
 			this:GetParent().isResizing = true
 			this:GetParent():StartSizing("BOTTOMLEFT")
