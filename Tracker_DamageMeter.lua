@@ -745,8 +745,11 @@ local function SnapshotSession(verbose)
 					DP("  who.Name is nil, cannot store damage secrets")
 				end
 
-				if source.isLocalPlayer and Recount.FightingWho == "" then
-					Recount.FightingWho = GENERIC_FIGHT_NAME
+				if source.isLocalPlayer then
+					local fwOk, fwEmpty = pcall(function() return Recount.FightingWho == "" end)
+					if fwOk and fwEmpty then
+						Recount.FightingWho = GENERIC_FIGHT_NAME
+					end
 				end
 			end
 		end
@@ -843,7 +846,8 @@ local function UpdateTick()
 		end
 
 		if found then
-			if Recount.FightingWho == "" then
+			local fwOk2, fwEmpty2 = pcall(function() return Recount.FightingWho == "" end)
+			if fwOk2 and fwEmpty2 then
 				Recount.FightingWho = GENERIC_FIGHT_NAME
 			end
 			Recount.NewData = true
@@ -893,11 +897,14 @@ local function OnCombatEnd()
 
 		ParseSessionFull()
 
-		if Recount.FightingWho == "" then
+		local fwOk3, fwEmpty3 = pcall(function() return Recount.FightingWho == "" end)
+		if fwOk3 and fwEmpty3 then
 			Recount.FightingWho = GENERIC_FIGHT_NAME
 		end
 
-		DP("Calling LeaveCombat, FightingWho=" .. Recount.FightingWho)
+		local fwStr = ""
+		pcall(function() fwStr = Recount.FightingWho end)
+		DP("Calling LeaveCombat, FightingWho=" .. tostring(fwStr))
 		Recount:LeaveCombat(GetTime())
 		Recount:FullRefreshMainWindow()
 
