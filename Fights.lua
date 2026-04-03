@@ -28,7 +28,9 @@ function Fights:MoveFights()
 		for i = math.min(#Recount.db2.FoughtWho, Recount.db.profile.MaxFights - 1), 1, -1 do
 			Recount.db2.FoughtWho[i + 1] = Recount.db2.FoughtWho[i]
 		end
-		Recount.db2.FoughtWho[1] = Recount.FightingWho.." "..Recount.InCombatF.."-"..date("%H:%M:%S")
+		local fwLabel = ""
+		pcall(function() fwLabel = Recount.FightingWho end)
+		Recount.db2.FoughtWho[1] = fwLabel.." "..Recount.InCombatF.."-"..date("%H:%M:%S")
 	end
 
 	for k, v in pairs(Recount.db2.combatants) do

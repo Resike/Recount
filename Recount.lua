@@ -1634,7 +1634,8 @@ function Recount:LeaveCombat(Time)
 	end
 	-- Did we actually fight someone?
 	Recount.InCombat = false
-	if (Recount.FightingWho == "") then
+	local fwOk, fwEmpty = pcall(function() return Recount.FightingWho == "" end)
+	if fwOk and fwEmpty then
 		return
 	end
 	-- Elsia: Only sync for actual fights
