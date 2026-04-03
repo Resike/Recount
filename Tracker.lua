@@ -1824,9 +1824,12 @@ function Recount:BossFightWhoFromFlags(srcFlags, dstFlags, victim, victimGUID)
 		if Recount.IsBoss(victimGUID) then
 			Recount.FightingWho = victim
 			Recount.FightingLevel = -1
-		elseif Recount.FightingWho == "" then
-			Recount.FightingWho = victim
-			Recount.FightingLevel = 1
+		else
+			local fwOk, fwEmpty = pcall(function() return Recount.FightingWho == "" end)
+			if fwOk and fwEmpty then
+				Recount.FightingWho = victim
+				Recount.FightingLevel = 1
+			end
 		end
 	end
 end
