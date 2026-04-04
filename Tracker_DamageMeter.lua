@@ -484,6 +484,22 @@ local function ResolveName(source, orderIndex)
 	return PROXY_PREFIX .. tostring(orderIndex or 0)
 end
 
+-- Ensure a combatant created by the combat log path has fight data structures.
+-- InitCombatant only creates Fights = {}, so CurrentFightData/OverallData may be missing.
+local function EnsureFightData(who)
+	if not who.Fights then
+		who.Fights = {}
+	end
+	if not who.Fights.CurrentFightData then
+		who.Fights.CurrentFightData = {}
+		Recount:InitFightData(who.Fights.CurrentFightData)
+	end
+	if not who.Fights.OverallData then
+		who.Fights.OverallData = {}
+		Recount:InitFightData(who.Fights.OverallData)
+	end
+end
+
 -- Find or create a combatant from C_DamageMeter source data
 local function GetOrCreateCombatant(source, orderIndex)
 	if not source then return nil end
@@ -500,6 +516,7 @@ local function GetOrCreateCombatant(source, orderIndex)
 				if existingName ~= name and not IsProxyCombatantName(name) then
 					return RenameCombatant(existingName, name)
 				end
+				EnsureFightData(existingCombatant)
 				return existingCombatant
 			end
 		end
@@ -510,6 +527,7 @@ local function GetOrCreateCombatant(source, orderIndex)
 		if guid and not who.GUID then
 			who.GUID = guid
 		end
+		EnsureFightData(who)
 		return who
 	end
 
@@ -761,7 +779,7 @@ local function SnapshotSession(verbose)
 
 	if sessionDuration > 0 then
 		for _, who in pairs(dbCombatants) do
-			if who.LastFightIn == Recount.db2.FightNum then
+			if who.LastFightIn == Recount.db2.FightNum and who.Fights and who.Fights.CurrentFightData then
 				who.Fights.CurrentFightData.ActiveTime = sessionDuration
 				who.Fights.CurrentFightData.TimeDamage = sessionDuration
 				who.Fights.CurrentFightData.TimeHeal = sessionDuration
